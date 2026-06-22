@@ -1,0 +1,15 @@
+.git
+.gitignore
+.idea
+.venv
+__pycache__
+*.py[cod]
+*.ipynb
+.ipynb_checkpoints
+images
+images_with_boxes
+assets
+tests
+test_*.py
+*.md
+.DS_Store

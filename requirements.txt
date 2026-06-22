@@ -1,0 +1,8 @@
+-r requirements-pratica1.txt
+
+jupyterlab>=4,<5
+matplotlib>=3.8,<4
+pandas>=2,<3
+requests>=2.31,<3
+pytest>=8,<9
+httpx>=0.27,<1

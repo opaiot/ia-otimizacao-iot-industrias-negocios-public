@@ -1,0 +1,25 @@
+# Ambientes e segredos locais
+.venv/
+.env
+.env.*
+!.env.example
+
+# Python e testes
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE e sistema operacional
+.idea/
+.vscode/
+.DS_Store
+
+# Saídas geradas durante a prática
+images_with_boxes/
+runs/
+*.log
