@@ -11,6 +11,8 @@ from ultralytics import YOLO
 
 
 NOME_MODELO = "yolov8n.pt"
+DIRETORIO_PRATICA = Path(__file__).resolve().parent
+CAMINHO_MODELO = DIRETORIO_PRATICA / NOME_MODELO
 EXTENSOES_PERMITIDAS = {".jpg", ".jpeg", ".png"}
 CLASSES_DE_INTERESSE = {
     "person": "pessoa",
@@ -50,7 +52,7 @@ app = FastAPI(
 )
 
 # O modelo é carregado uma única vez durante a inicialização do processo.
-modelo = YOLO(NOME_MODELO)
+modelo = YOLO(str(CAMINHO_MODELO))
 
 
 def gerar_status_operacional(contagens: dict[str, int]) -> str:
