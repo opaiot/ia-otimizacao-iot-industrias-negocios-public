@@ -12,4 +12,13 @@ rastreáveis, monitorados e preparados para operação.
 As próximas práticas incluirão versionamento, tracking de experimentos, model
 registry, transparência, monitoramento e a Arquitetura 6C implementada na VITA.
 
+## Autora
+
+**Fernanda Pereira Guidotti Carneiro**
+
+- Doutora em Ciências de Computação e Matemática Computacional - Universidade de São
+  Paulo (ICMC/USP);
+- especialista em Inteligência Artificial para Sistemas Industriais, MLOps e
+  Aplicações Inteligentes.
+
 [Voltar ao M4](../README.md)

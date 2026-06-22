@@ -37,15 +37,6 @@ Caso encontre algum problema no material ou tenha uma sugestão, utilize a seç�
 [Issues](https://github.com/opaiot/ia-otimizacao-iot-industrias-negocios-public/issues)
 do repositório.
 
-## Autora
-
-**Fernanda Pereira Guidotti Carneiro**
-
-- Doutora em Ciências de Computação e Matemática Computacional - Universidade de São
-  Paulo (ICMC/USP);
-- especialista em Inteligência Artificial para Sistemas Industriais, MLOps e
-  Aplicações Inteligentes.
-
 ## Licença
 
 O código e a documentação autoral deste repositório são disponibilizados sob a
