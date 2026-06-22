@@ -20,18 +20,6 @@ Conheça o curso em [opaiot.icmc.usp.br](https://opaiot.icmc.usp.br/).
 Cada módulo pode conter diferentes temas. Dentro de cada tema, as práticas possuem
 seu próprio README com apresentação do problema, requisitos e instruções de execução.
 
-## Conteúdo disponível
-
-### M4 - Otimização, Arquiteturas Industriais e MLOps
-
-#### Tema: MLOps
-
-| Prática | Descrição |
-| --- | --- |
-| [Prática 1 - Monitoramento Inteligente de Pátio](M4/mlops/pratica-01-monitoramento-inteligente-de-patio/) | Do experimento com YOLO em notebook à inferência disponibilizada por uma API |
-
-Novas práticas e materiais serão adicionados progressivamente.
-
 ## Como utilizar
 
 Clone o repositório:
@@ -49,12 +37,14 @@ Caso encontre algum problema no material ou tenha uma sugestão, utilize a seç�
 [Issues](https://github.com/opaiot/ia-otimizacao-iot-industrias-negocios-public/issues)
 do repositório.
 
-## Author
+## Autora
 
-**Fernanda Pereira Guidotti Carneiro**  
-Ph.D. in Computer Science and Computational Mathematics - University of São Paulo
-(ICMC/USP)  
-AI Specialist in Industrial Systems, MLOps, and Intelligent Applications
+**Fernanda Pereira Guidotti Carneiro**
+
+- Doutora em Ciências de Computação e Matemática Computacional - Universidade de São
+  Paulo (ICMC/USP);
+- especialista em Inteligência Artificial para Sistemas Industriais, MLOps e
+  Aplicações Inteligentes.
 
 ## Licença
 
