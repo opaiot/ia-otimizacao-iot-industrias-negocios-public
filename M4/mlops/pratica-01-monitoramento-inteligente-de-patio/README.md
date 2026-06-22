@@ -297,3 +297,14 @@ Esses elementos serão aprofundados nas práticas seguintes do curso.
 
 As imagens do case são provenientes do Wikimedia Commons e possuem licenças
 abertas. A autoria e as páginas de origem estão registradas no notebook principal.
+
+## Origem didática desta prática
+
+A concepção inicial desta prática foi inspirada e adaptada a partir de um laboratório
+público da especialização **Machine Learning Engineering for Production**, da
+DeepLearning.AI, disponibilizado sob a Apache License 2.0. O case industrial, os
+notebooks em português, as imagens, a API FastAPI, o cliente IoT e a organização
+didática foram desenvolvidos e adaptados para este curso.
+
+Material de referência:
+[machine-learning-engineering-for-production-public](https://github.com/https-deeplearning-ai/machine-learning-engineering-for-production-public).
