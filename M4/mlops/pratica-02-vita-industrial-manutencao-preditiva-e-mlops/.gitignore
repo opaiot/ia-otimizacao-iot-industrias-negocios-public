@@ -1,0 +1,26 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.idea/
+.DS_Store
+.env
+*.log
+node_modules/
+dist/
+build/
+
+# Artefatos reproduzíveis gerados pela prática
+artifacts/models/
+artifacts/tracking/
+artifacts/reports/
+artifacts/registry.json
+artifacts/manifests/*.json
+data/raw/*.csv
+data/processed/*.csv
+backend/docs/build/
+
+# Mantém a estrutura de diretórios vazios
+!artifacts/**/.gitkeep
+!data/**/.gitkeep
+!docs/governance/.gitkeep

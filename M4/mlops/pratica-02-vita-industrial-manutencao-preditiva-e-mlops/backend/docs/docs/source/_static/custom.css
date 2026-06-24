@@ -1,0 +1,4 @@
+/* limite do logo no topo (RTD theme e genérico) */
+.wy-side-nav-search .logo,
+.wy-side-nav-search .logo img,
+img.logo { max-height: 56px; width: auto; }

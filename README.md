@@ -15,7 +15,7 @@ Conheça o curso em [opaiot.icmc.usp.br](https://opaiot.icmc.usp.br/).
 | `M1` | Fundamentos de Dados e Aprendizado de Máquina |
 | `M2` | Fundamentos de IoT e IIoT |
 | `M3` | Computação Distribuída para IA Aplicada |
-| [`M4`](M4/) | Otimização, Arquiteturas Industriais e MLOps |
+| [`M4`] | Otimização, Arquiteturas Industriais e MLOps |
 
 Cada módulo pode conter diferentes temas. Dentro de cada tema, as práticas possuem
 seu próprio README com apresentação do problema, requisitos e instruções de execução.

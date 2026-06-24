@@ -1,0 +1,30 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: vita-api
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      VITA_OPENAI_MODEL: ${VITA_OPENAI_MODEL:-gpt-5.4-mini}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./artifacts:/app/artifacts
+      - ./data:/app/data
+      - ./docs/governance:/app/docs/governance
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    container_name: vita-dashboard
+    environment:
+      VITA_API_URL: http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "8501:8501"
+    restart: unless-stopped

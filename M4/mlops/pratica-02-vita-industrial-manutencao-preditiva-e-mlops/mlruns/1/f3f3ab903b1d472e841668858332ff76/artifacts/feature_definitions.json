@@ -1,0 +1,14 @@
+{
+  "version": "industrial_sensor_features:v1",
+  "features": {
+    "motor_age_days": "Idade do motor em dias.",
+    "temp_mean_24h": "Temperatura média das últimas 24 horas.",
+    "vibration_rms_24h": "Vibração RMS das últimas 24 horas.",
+    "current_mean_24h": "Corrente elétrica média das últimas 24 horas.",
+    "load_mean_24h": "Carga operacional média das últimas 24 horas.",
+    "maintenance_last_30d": "Indicador de manutenção nos últimos 30 dias.",
+    "plant": "Planta industrial de origem.",
+    "temp_load_interaction": "Interação entre temperatura e carga.",
+    "vibration_per_age": "Vibração ajustada pela idade do equipamento."
+  }
+}

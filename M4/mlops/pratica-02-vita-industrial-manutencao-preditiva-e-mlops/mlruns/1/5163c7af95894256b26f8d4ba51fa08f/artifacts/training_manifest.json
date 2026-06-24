@@ -1,0 +1,27 @@
+{
+  "created_at": "2026-06-22T01:36:37.467187+00:00",
+  "data_version": {
+    "name": "sensors_train_v1",
+    "path": "data/raw/sensors_train_v1.csv",
+    "rows": 350,
+    "sha256": "1e2ce8aa2e4443fdc3473f3decad65dd33de38a9ee20d0bacc00dda8de8ae3bb",
+    "schema_version": "sensor_snapshot:v1"
+  },
+  "feature_set_version": "industrial_sensor_features:v1",
+  "code_commit": "uncommitted",
+  "requirements_sha256": "d236f7813f0d790a9bd69e0c9d8aa3fd5863251b4b296d8d5804065f795d106c",
+  "random_seed": 42,
+  "decision_threshold": 0.35,
+  "split": {
+    "test_size": 0.25,
+    "strategy": "stratified",
+    "seed": 42
+  },
+  "validation": {
+    "status": "valid",
+    "rows": 350,
+    "columns": 12,
+    "null_values": 0,
+    "schema_version": "sensor_snapshot:v1"
+  }
+}

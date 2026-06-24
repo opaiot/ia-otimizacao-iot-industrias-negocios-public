@@ -1,0 +1,23 @@
+artifact_path: /Users/nandaguidotti/Documents/OpAIoT/MLOps/vita/mlruns/1/models/m-0fda2fad5ede4fb18c8c7bcde68a3aae/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.skops
+    predict_fn: predict
+    python_version: 3.12.6
+  sklearn:
+    code: null
+    pickled_model: model.skops
+    serialization_format: skops
+    sklearn_version: 1.9.0
+    skops_trusted_types: null
+mlflow_version: 3.14.0
+model_id: m-0fda2fad5ede4fb18c8c7bcde68a3aae
+model_size_bytes: 98665
+model_uuid: m-0fda2fad5ede4fb18c8c7bcde68a3aae
+prompts: null
+run_id: 36c47f1baaaf4a498c2a00f4ce4389d0
+utc_time_created: '2026-06-22 00:40:23.195763'
