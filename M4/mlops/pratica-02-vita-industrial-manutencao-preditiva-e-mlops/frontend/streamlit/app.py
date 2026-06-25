@@ -6,10 +6,12 @@ import pandas as pd
 import plotly.express as px
 import requests
 import streamlit as st
-
+from pathlib import Path
 
 API_URL = os.getenv("VITA_API_URL", "http://127.0.0.1:8000")
 TIMEOUT = 180
+APP_DIR = Path(__file__).resolve().parent
+LOGO_PATH = APP_DIR / "vita.png"
 
 st.set_page_config(
     page_title="VITA Industrial",
@@ -40,7 +42,7 @@ def service_status():
         return False
 
 
-st.sidebar.image("frontend/streamlit/vita.png", width=120)
+st.sidebar.image(str(LOGO_PATH), width=120)
 st.sidebar.title("VITA Industrial")
 online = service_status()
 page = st.sidebar.radio(
