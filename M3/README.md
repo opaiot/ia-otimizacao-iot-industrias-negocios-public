@@ -127,3 +127,5 @@ Dataset IoT / sensores
 - Navegador para acessar Prometheus e Grafana.
 
 Cada aula detalha suas próprias dependências e comandos de execução. Use este README como índice do módulo e siga o README específico da aula antes de executar a prática.
+
+[Voltar ao início do curso](../README.md)
