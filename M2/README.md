@@ -8,6 +8,8 @@ Este repositório publica código para as Aulas 1, 2, 4, 7 e 8. As Aulas 3, 5 e 
 
 <img width="1672" height="941" alt="IoT-Mod2" src="https://github.com/user-attachments/assets/ce77dd9c-09bf-4cd6-8fc4-4988094c9c0d" />
 
+[Voltar ao início do curso](../README.md)
+
 ## Ordem sugerida
 
 1. Comece pela [Aula 1 - Stacks e Ferramentas](Aula_1_stacks_ferramentas/pratica_01_ESP32_blink.ino) para validar o ambiente (Arduino IDE/Wokwi) piscando um LED.
@@ -137,3 +139,5 @@ Extras
 - Git para clonar o repositório.
 
 Cada prática comenta, no topo do próprio código (ou no README, quando houver), os requisitos específicos de ligação, bibliotecas e configuração. Use este README como índice do módulo e siga a documentação específica antes de executar a prática.
+
+[Voltar ao início do curso](../README.md)
