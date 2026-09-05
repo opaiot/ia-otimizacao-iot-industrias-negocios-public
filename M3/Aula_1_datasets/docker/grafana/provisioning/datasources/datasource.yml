@@ -1,0 +1,15 @@
+# Data source Prometheus provisionado automaticamente. Dentro da rede docker,
+# o Prometheus é acessível pelo nome do serviço (prometheus:9090).
+apiVersion: 1
+
+datasources:
+  - name: Prometheus - IAQ
+    uid: prometheus-iaq
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      timeInterval: 5s
+      httpMethod: GET

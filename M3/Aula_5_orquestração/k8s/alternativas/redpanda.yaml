@@ -1,0 +1,49 @@
+# Alternativa didática ao kafka.yaml para playgrounds pequenos.
+# Se aplicar este arquivo, ajuste os apps para KAFKA_BOOTSTRAP_SERVERS=redpanda:9092.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redpanda
+  namespace: opaiot-p5
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redpanda
+  template:
+    metadata:
+      labels:
+        app: redpanda
+    spec:
+      containers:
+        - name: redpanda
+          image: docker.redpanda.com/redpandadata/redpanda:latest
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - |
+              redpanda start \
+                --mode dev-container \
+                --smp 1 \
+                --memory 512M \
+                --reserve-memory 0M \
+                --overprovisioned \
+                --kafka-addr 0.0.0.0:9092 \
+                --advertise-kafka-addr redpanda:9092
+          ports:
+            - containerPort: 9092
+              name: kafka
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redpanda
+  namespace: opaiot-p5
+spec:
+  selector:
+    app: redpanda
+  ports:
+    - name: kafka
+      port: 9092
+      targetPort: kafka

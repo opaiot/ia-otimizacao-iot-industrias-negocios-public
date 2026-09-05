@@ -1,0 +1,11 @@
+# Configuração equivalente à gerada por scripts/configure_prometheus.sh,
+# porém apontando para o serviço consumer da rede docker em vez de localhost.
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: "iot-kafka-consumers"
+    scrape_interval: 5s
+    static_configs:
+      - targets:
+          - "consumer:8000"

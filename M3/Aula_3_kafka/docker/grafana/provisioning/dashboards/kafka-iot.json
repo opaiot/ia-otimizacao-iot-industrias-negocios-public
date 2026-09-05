@@ -1,0 +1,157 @@
+{
+  "id": null,
+  "uid": "iot-kafka-telemetry",
+  "title": "Kafka IoT - Telemetria Observavel",
+  "tags": ["opaiot", "kafka", "iot"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Temperatura por sensor",
+      "datasource": { "type": "prometheus", "uid": "prometheus-kafka-iot" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": { "unit": "celsius" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "iot_temperature_celsius",
+          "legendFormat": "{{room}} / {{sensor_id}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Umidade por sensor",
+      "datasource": { "type": "prometheus", "uid": "prometheus-kafka-iot" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+      "fieldConfig": {
+        "defaults": { "unit": "percent" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "iot_humidity_percent",
+          "legendFormat": "{{room}} / {{sensor_id}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "CO2 por sensor",
+      "datasource": { "type": "prometheus", "uid": "prometheus-kafka-iot" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+      "fieldConfig": {
+        "defaults": { "unit": "ppm" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "iot_co2_ppm",
+          "legendFormat": "{{room}} / {{sensor_id}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Taxa de eventos consumidos",
+      "datasource": { "type": "prometheus", "uid": "prometheus-kafka-iot" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": {
+        "defaults": { "unit": "ops" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(iot_events_consumed_total[1m])",
+          "legendFormat": "{{consumer_id}} / {{room}} / {{sensor_id}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Eventos por partition",
+      "datasource": { "type": "prometheus", "uid": "prometheus-kafka-iot" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "iot_events_by_partition_total",
+          "legendFormat": "consumer={{consumer_id}} partition={{partition}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Ultimo offset consumido",
+      "datasource": { "type": "prometheus", "uid": "prometheus-kafka-iot" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "iot_kafka_last_offset",
+          "legendFormat": "consumer={{consumer_id}} partition={{partition}}"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Total de eventos consumidos",
+      "datasource": { "type": "prometheus", "uid": "prometheus-kafka-iot" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["sum"],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(iot_events_consumed_total)",
+          "legendFormat": "eventos"
+        }
+      ]
+    }
+  ]
+}

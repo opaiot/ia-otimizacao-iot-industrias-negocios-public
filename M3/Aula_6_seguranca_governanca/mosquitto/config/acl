@@ -1,0 +1,8 @@
+user sensor01
+topic write opaiot/sensors/sensor01/telemetry
+user monitor01
+topic read opaiot/sensors/+/telemetry
+topic read opaiot/devices/+/status
+user operador01
+topic read opaiot/sensors/+/telemetry
+topic write opaiot/devices/+/cmd

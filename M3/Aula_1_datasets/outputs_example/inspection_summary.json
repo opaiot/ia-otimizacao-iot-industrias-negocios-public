@@ -1,0 +1,38 @@
+{
+  "csv_file": "C:/Users/jcf_s/source/git/opaIOT_2026/Modulo_3/Aula_1_datasets/data/IoT_Indoor_Air_Quality_Dataset.csv",
+  "rows": 97458,
+  "columns": 12,
+  "column_mapping": {
+    "Timestamp": "timestamp",
+    "Temperature (?C)": "temperature_c",
+    "Humidity (%)": "humidity",
+    "CO2 (ppm)": "co2_ppm",
+    "PM2.5 (?g/m?)": "pm2_5_g_m",
+    "PM10 (?g/m?)": "pm10_g_m",
+    "TVOC (ppb)": "tvoc_ppb",
+    "CO (ppm)": "co_ppm",
+    "Light Intensity (lux)": "light_intensity_lux",
+    "Motion Detected": "motion_detected",
+    "Occupancy Count": "occupancy_count",
+    "Ventilation Status": "ventilation_status"
+  },
+  "measurement_columns": [
+    "temperature_c",
+    "humidity",
+    "co2_ppm",
+    "pm2_5_g_m",
+    "pm10_g_m",
+    "tvoc_ppb",
+    "co_ppm",
+    "light_intensity_lux",
+    "motion_detected"
+  ],
+  "event_records_written": 500,
+  "outputs": [
+    "columns_profile.csv",
+    "semantic_classification.csv",
+    "numeric_summary.csv",
+    "normalized_events.jsonl",
+    "iot_event_schema.json"
+  ]
+}

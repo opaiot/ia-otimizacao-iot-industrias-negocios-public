@@ -1,0 +1,90 @@
+# Sobe a prática da Aula 1 (datasets / observabilidade) em containers:
+# exportador Python (/metrics) -> Prometheus -> Grafana.
+#
+# Os scripts Python da pasta ../scripts são usados sem modificação. Como eles
+# usam constantes (CSV_FILE, PORT) em vez de variáveis de ambiente, a imagem
+# preserva a estrutura de pastas da aula e cada serviço usa o working_dir certo.
+#
+# Uso (a partir desta pasta docker/):
+#   docker compose up --build
+#
+# Para gerar os artefatos de inspeção em ../outputs (execução única):
+#   docker compose --profile inspect run --rm inspect
+#
+# Endpoints:
+#   Métricas do exporter : http://localhost:8000/metrics
+#   Prometheus           : http://localhost:9090
+#   Grafana              : http://localhost:3000  (admin/admin)
+#   Dashboard            : http://localhost:3000/d/opaiot-iaq
+
+services:
+  exporter:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: aula1-iaq
+    container_name: aula1_exporter
+    restart: unless-stopped
+    working_dir: /app/scripts
+    command: ["python", "2-prometheus.py"]
+    ports:
+      - "8000:8000" # endpoint /metrics
+    networks:
+      - iaq
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: aula1_prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      - exporter
+    networks:
+      - iaq
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: aula1_grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      TZ: America/Sao_Paulo
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - iaq
+
+  # Serviço de execução única: roda 1-inspect.py e grava os artefatos em
+  # ../outputs no host. Não sobe com o "up"; use o profile "inspect".
+  inspect:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: aula1-iaq
+    container_name: aula1_inspect
+    profiles: ["inspect"]
+    working_dir: /app/scripts
+    command: ["python", "1-inspect.py"]
+    volumes:
+      - ../outputs:/app/outputs
+    networks:
+      - iaq
+
+volumes:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  iaq:
+    driver: bridge

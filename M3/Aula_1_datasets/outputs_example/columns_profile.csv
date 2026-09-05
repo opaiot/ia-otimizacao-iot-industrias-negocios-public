@@ -1,0 +1,13 @@
+original_name,normalized_name,dtype,non_null,null_count,unique_values,sample_values
+Timestamp,timestamp,object,97458,0,97458,18-02-2024 08:00; 18-02-2024 08:05; 18-02-2024 08:10; 18-02-2024 08:15
+Temperature (?C),temperature_c,float64,95509,1949,1001,21.75; 27.51; 25.32; 23.99
+Humidity (%),humidity,float64,95509,1949,4001,63.11; 68.03; 53.51; 58.52
+CO2 (ppm),co2_ppm,float64,95509,1949,47791,989.74; 924.59; 604.05; 692.2
+PM2.5 (?g/m?),pm2_5_g_m,float64,95509,1949,7000,31.17; 27.32; 73.84; 62.94
+PM10 (?g/m?),pm10_g_m,float64,95509,1949,9001,89.66; 44.82; 71.08; 10.9
+TVOC (ppb),tvoc_ppb,float64,95509,1949,39693,226.83; 116.76; 56.59; 228.06
+CO (ppm),co_ppm,float64,95509,1949,491,2.84; 3.12; 3.59; 2.66
+Light Intensity (lux),light_intensity_lux,float64,95509,1949,58917,646.86; 845.45; 560.03; 499.84
+Motion Detected,motion_detected,float64,95509,1949,2,0.0; 1.0
+Occupancy Count,occupancy_count,float64,95509,1949,50,49.0; 11.0; 29.0; 28.0
+Ventilation Status,ventilation_status,object,95509,1949,2,Open; Closed

@@ -1,0 +1,10 @@
+# Job opaiot_iaq apontando para o exportador na rede docker (exporter:8000),
+# equivalente ao target localhost:8000 usado no cenário de VM.
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: "opaiot_iaq"
+    scrape_interval: 5s
+    static_configs:
+      - targets: ["exporter:8000"]

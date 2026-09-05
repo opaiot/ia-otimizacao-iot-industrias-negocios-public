@@ -1,0 +1,151 @@
+# Sobe a prática completa da Aula 3 (Kafka IoT observável) em containers:
+# Kafka (KRaft, sem ZooKeeper) -> producer -> consumer (/metrics) -> Prometheus -> Grafana.
+#
+# Os scripts Python da pasta ../scripts são usados sem modificação. Toda a
+# configuração é injetada por variáveis de ambiente que os próprios scripts
+# já leem (KAFKA_BOOTSTRAP_SERVERS, KAFKA_TOPIC, METRICS_PORT, etc.).
+#
+# Uso (a partir desta pasta docker/):
+#   docker compose up --build
+#
+# Endpoints:
+#   Métricas do consumer : http://localhost:8000/metrics
+#   Prometheus           : http://localhost:9090
+#   Grafana              : http://localhost:3000  (admin/admin)
+#   Dashboard            : http://localhost:3000/d/iot-kafka-telemetry
+#   Kafka (host)         : localhost:29092
+
+services:
+  kafka:
+    image: apache/kafka:4.0.0
+    container_name: aula3_kafka
+    restart: unless-stopped
+    ports:
+      - "29092:29092" # listener externo para acesso a partir do host (opcional)
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      TZ: America/Sao_Paulo
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "/opt/kafka/bin/kafka-broker-api-versions.sh", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+    networks:
+      - kafka-iot
+
+  # Cria o tópico iot.air_quality com 3 partitions, como na prática da VM.
+  kafka-init:
+    image: apache/kafka:4.0.0
+    container_name: aula3_kafka_init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        /opt/kafka/bin/kafka-topics.sh \
+          --create --if-not-exists \
+          --topic iot.air_quality \
+          --bootstrap-server kafka:9092 \
+          --partitions 3 \
+          --replication-factor 1
+        echo "Topico iot.air_quality pronto:"
+        /opt/kafka/bin/kafka-topics.sh --describe --topic iot.air_quality --bootstrap-server kafka:9092
+    networks:
+      - kafka-iot
+
+  producer:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: aula3-kafka-iot
+    container_name: aula3_producer
+    restart: unless-stopped
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC: iot.air_quality
+      SEND_INTERVAL_SECONDS: "1"
+    command: ["python", "scripts/producer.py"]
+    networks:
+      - kafka-iot
+
+  consumer:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: aula3-kafka-iot
+    container_name: aula3_consumer
+    restart: unless-stopped
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    ports:
+      - "8000:8000" # endpoint /metrics
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC: iot.air_quality
+      GROUP_ID: air-quality-processors
+      AUTO_OFFSET_RESET: earliest
+      METRICS_PORT: "8000"
+      CONSUMER_ID: consumer-docker
+    command: ["python", "scripts/consumer_metrics.py"]
+    networks:
+      - kafka-iot
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: aula3_prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      - consumer
+    networks:
+      - kafka-iot
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: aula3_grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      TZ: America/Sao_Paulo
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - kafka-iot
+
+volumes:
+  kafka_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  kafka-iot:
+    driver: bridge

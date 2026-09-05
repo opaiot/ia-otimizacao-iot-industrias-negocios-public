@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mqtt-to-kafka
+  namespace: opaiot-p5
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mqtt-to-kafka
+  template:
+    metadata:
+      labels:
+        app: mqtt-to-kafka
+    spec:
+      containers:
+        - name: mqtt-to-kafka
+          # Construa a imagem localmente antes de aplicar em Minikube/K3s/KillerCoda.
+          image: opaiot/mqtt-to-kafka:local
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: MQTT_HOST
+              value: mosquitto
+            - name: MQTT_PORT
+              value: "1883"
+            - name: MQTT_TOPIC
+              value: iot/+/telemetry
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: kafka:9092
+            - name: KAFKA_TOPIC
+              value: iot.telemetry

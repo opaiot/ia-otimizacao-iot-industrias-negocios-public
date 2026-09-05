@@ -1,0 +1,13 @@
+column,semantic_class,unit,reason,prometheus_metric
+timestamp,metadata,unknown,time reference for each observation,
+temperature_c,measurement,celsius,numeric value observed by a sensor,opaiot_iaq_sensor_value
+humidity,measurement,percent,numeric value observed by a sensor,opaiot_iaq_sensor_value
+co2_ppm,measurement,ppm,numeric value observed by a sensor,opaiot_iaq_sensor_value
+pm2_5_g_m,measurement,ug_m3,numeric value observed by a sensor,opaiot_iaq_sensor_value
+pm10_g_m,measurement,ug_m3,numeric value observed by a sensor,opaiot_iaq_sensor_value
+tvoc_ppb,measurement,ppb,numeric value observed by a sensor,opaiot_iaq_sensor_value
+co_ppm,measurement,unknown,numeric value observed by a sensor,opaiot_iaq_sensor_value
+light_intensity_lux,measurement,unknown,numeric value observed by a sensor,opaiot_iaq_sensor_value
+motion_detected,measurement,unknown,numeric value observed by a sensor,opaiot_iaq_sensor_value
+occupancy_count,state,unknown,current condition of sensor or environment,
+ventilation_status,state,unknown,current condition of sensor or environment,

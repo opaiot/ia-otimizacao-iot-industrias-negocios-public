@@ -1,0 +1,15 @@
+{
+  "name": "opaiot_iot_event_minimal_schema",
+  "version": "1.0",
+  "required_fields": {
+    "event_id": "string",
+    "timestamp": "string",
+    "device_id": "string",
+    "location": "string",
+    "type": "measurement | event | state | command | metadata",
+    "metric": "string",
+    "value": "number | string",
+    "unit": "string",
+    "source_dataset": "string"
+  }
+}
