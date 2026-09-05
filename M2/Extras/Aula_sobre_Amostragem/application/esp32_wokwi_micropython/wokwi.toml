@@ -1,0 +1,6 @@
+[wokwi]
+version = 1
+
+# MicroPython firmware embutido no Wokwi — não é necessário apontar binário.
+# Este arquivo habilita a integração com a extensão VS Code do Wokwi.
+# Para usar online: abra https://wokwi.com e importe diagram.json + arquivos .py

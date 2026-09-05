@@ -1,0 +1,106 @@
+version: '3.8'
+
+services:
+  # Eclipse Mosquitto - Broker MQTT (Open Source)
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    container_name: mqtt-broker
+    ports:
+      - "1883:1883"    # MQTT port (protocolo não-criptografado)
+      - "8883:8883"    # MQTT sobre TLS
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-logs:/mosquitto/log
+    networks:
+      - iot-network
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-h", "127.0.0.1", "-t", "\\$SYS/broker/uptime", "-E"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: mosquitto -c /mosquitto/config/mosquitto.conf
+
+  # PostgreSQL com TimescaleDB
+  postgres:
+    image: timescale/timescaledb:latest-pg15
+    container_name: timescaledb
+    environment:
+      POSTGRES_USER: iot_user
+      POSTGRES_PASSWORD: iot_password
+      POSTGRES_DB: iot_database
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+    networks:
+      - iot-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U iot_user -d iot_database"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend Node.js
+  backend:
+    build: ./backend
+    container_name: iot-backend
+    environment:
+      NODE_ENV: production
+      MQTT_BROKER: mosquitto
+      MQTT_PORT: 1883
+      MQTT_TOPIC: opaiot/temperature
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: iot_user
+      DB_PASSWORD: iot_password
+      DB_NAME: iot_database
+    ports:
+      - "3000:3000"
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - iot-network
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  # Grafana - Visualização em Tempo Real
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana-dashboard
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_SECURITY_ADMIN_USER: admin
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+      TZ: America/Sao_Paulo
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+    depends_on:
+      - postgres
+    networks:
+      - iot-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:
+  mosquitto-data:
+  mosquitto-logs:
+  grafana-storage:
+
+networks:
+  iot-network:
+    driver: bridge

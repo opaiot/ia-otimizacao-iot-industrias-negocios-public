@@ -1,0 +1,170 @@
+{
+  "__inputs": [],
+  "__requires": [
+    { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.4.0" },
+    { "type": "datasource", "id": "influxdb", "name": "InfluxDB", "version": "1.0.0" }
+  ],
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 1, "fillOpacity": 10 },
+          "unit": "accMS2"
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "ax" }, "properties": [{ "id": "displayName", "value": "Eixo X" }, { "id": "color", "value": { "fixedColor": "#1f77b4", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "ay" }, "properties": [{ "id": "displayName", "value": "Eixo Y" }, { "id": "color", "value": { "fixedColor": "#ff7f0e", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "az" }, "properties": [{ "id": "displayName", "value": "Eixo Z" }, { "id": "color", "value": { "fixedColor": "#2ca02c", "mode": "fixed" } }] }
+        ]
+      },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "legend": { "calcs": ["last", "min", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+          "query": "from(bucket: \"iot_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"accel_raw\")\n  |> filter(fn: (r) => r._field == \"ax\" or r._field == \"ay\" or r._field == \"az\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
+          "refId": "A"
+        }
+      ],
+      "title": "Aceleração em Tempo Real (ax, ay, az)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "#1f77b4", "mode": "fixed" },
+          "custom": { "fillOpacity": 80, "gradientMode": "none" },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 9, "w": 8, "x": 0, "y": 9 },
+      "id": 2,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.9,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": { "showLegend": false, "displayMode": "list", "placement": "bottom" },
+        "orientation": "vertical",
+        "showValue": "never",
+        "stacking": "none",
+        "tooltip": { "mode": "single" },
+        "xField": "freq_label"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+          "query": "from(bucket: \"iot_data\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement == \"accel_fft\")\n  |> filter(fn: (r) => r.axis == \"ax\")\n  |> filter(fn: (r) => r._field == \"magnitude\")\n  |> group(columns: [\"freq_bin\"])\n  |> last()\n  |> group()\n  |> filter(fn: (r) => exists r.freq_hz)\n  |> sort(columns: [\"freq_bin\"])\n  |> map(fn: (r) => ({_time: r._time, freq_label: r.freq_hz + \" Hz\", magnitude: r._value}))\n  |> keep(columns: [\"_time\", \"freq_label\", \"magnitude\"])",
+          "refId": "A"
+        }
+      ],
+      "title": "FFT — Eixo X (ax)",
+      "type": "barchart"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "#ff7f0e", "mode": "fixed" },
+          "custom": { "fillOpacity": 80, "gradientMode": "none" },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 9, "w": 8, "x": 8, "y": 9 },
+      "id": 3,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.9,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": { "showLegend": false, "displayMode": "list", "placement": "bottom" },
+        "orientation": "vertical",
+        "showValue": "never",
+        "stacking": "none",
+        "tooltip": { "mode": "single" },
+        "xField": "freq_label"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+          "query": "from(bucket: \"iot_data\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement == \"accel_fft\")\n  |> filter(fn: (r) => r.axis == \"ay\")\n  |> filter(fn: (r) => r._field == \"magnitude\")\n  |> group(columns: [\"freq_bin\"])\n  |> last()\n  |> group()\n  |> filter(fn: (r) => exists r.freq_hz)\n  |> sort(columns: [\"freq_bin\"])\n  |> map(fn: (r) => ({_time: r._time, freq_label: r.freq_hz + \" Hz\", magnitude: r._value}))\n  |> keep(columns: [\"_time\", \"freq_label\", \"magnitude\"])",
+          "refId": "A"
+        }
+      ],
+      "title": "FFT — Eixo Y (ay)",
+      "type": "barchart"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "#2ca02c", "mode": "fixed" },
+          "custom": { "fillOpacity": 80, "gradientMode": "none" },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 9, "w": 8, "x": 16, "y": 9 },
+      "id": 4,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.9,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": { "showLegend": false, "displayMode": "list", "placement": "bottom" },
+        "orientation": "vertical",
+        "showValue": "never",
+        "stacking": "none",
+        "tooltip": { "mode": "single" },
+        "xField": "freq_label"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+          "query": "from(bucket: \"iot_data\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement == \"accel_fft\")\n  |> filter(fn: (r) => r.axis == \"az\")\n  |> filter(fn: (r) => r._field == \"magnitude\")\n  |> group(columns: [\"freq_bin\"])\n  |> last()\n  |> group()\n  |> filter(fn: (r) => exists r.freq_hz)\n  |> sort(columns: [\"freq_bin\"])\n  |> map(fn: (r) => ({_time: r._time, freq_label: r.freq_hz + \" Hz\", magnitude: r._value}))\n  |> keep(columns: [\"_time\", \"freq_label\", \"magnitude\"])",
+          "refId": "A"
+        }
+      ],
+      "title": "FFT — Eixo Z (az)",
+      "type": "barchart"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "tags": ["iot", "mpu6050", "fft"],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "hide": 2,
+        "includeAll": false,
+        "name": "DS_INFLUXDB",
+        "options": [],
+        "query": "influxdb",
+        "refresh": 1,
+        "type": "datasource"
+      }
+    ]
+  },
+  "time": { "from": "now-5m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "MPU6050 IoT — Acelerômetro",
+  "uid": "mpu6050-iot",
+  "version": 1
+}

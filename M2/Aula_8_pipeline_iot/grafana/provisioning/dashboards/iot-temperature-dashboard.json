@@ -1,0 +1,296 @@
+{
+    "dashboard": {
+        "title": "IoT - Monitoramento de Temperatura",
+        "tags": [
+            "iot",
+            "temperature",
+            "timescaledb"
+        ],
+        "timezone": "browser",
+        "schemaVersion": 38,
+        "version": 1,
+        "refresh": "10s",
+        "time": {
+            "from": "now-6h",
+            "to": "now"
+        },
+        "panels": [
+            {
+                "id": 1,
+                "title": "Temperatura em Tempo Real",
+                "type": "stat",
+                "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 0,
+                    "y": 0
+                },
+                "targets": [
+                    {
+                        "rawSql": "SELECT temperature FROM temperature_metrics ORDER BY time DESC LIMIT 1;",
+                        "refId": "A",
+                        "datasourceUid": "prometheus_uid"
+                    }
+                ],
+                "fieldConfig": {
+                    "defaults": {
+                        "color": {
+                            "mode": "palette-classic"
+                        },
+                        "custom": {
+                            "hideFrom": {
+                                "tooltip": false,
+                                "viz": false,
+                                "legend": false
+                            }
+                        },
+                        "mappings": [],
+                        "thresholds": {
+                            "mode": "absolute",
+                            "steps": [
+                                {
+                                    "color": "blue",
+                                    "value": null
+                                },
+                                {
+                                    "color": "green",
+                                    "value": 18
+                                },
+                                {
+                                    "color": "yellow",
+                                    "value": 28
+                                },
+                                {
+                                    "color": "red",
+                                    "value": 35
+                                }
+                            ]
+                        },
+                        "unit": "celsius"
+                    }
+                },
+                "options": {
+                    "orientation": "auto",
+                    "textMode": "auto",
+                    "colorMode": "value",
+                    "graphMode": "area",
+                    "justifyMode": "auto",
+                    "displayMode": "lcd"
+                }
+            },
+            {
+                "id": 2,
+                "title": "Umidade em Tempo Real",
+                "type": "stat",
+                "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 12,
+                    "y": 0
+                },
+                "targets": [
+                    {
+                        "rawSql": "SELECT humidity FROM temperature_metrics ORDER BY time DESC LIMIT 1;",
+                        "refId": "A"
+                    }
+                ],
+                "fieldConfig": {
+                    "defaults": {
+                        "color": {
+                            "mode": "palette-classic"
+                        },
+                        "mappings": [],
+                        "thresholds": {
+                            "mode": "absolute",
+                            "steps": [
+                                {
+                                    "color": "red",
+                                    "value": null
+                                },
+                                {
+                                    "color": "yellow",
+                                    "value": 30
+                                },
+                                {
+                                    "color": "green",
+                                    "value": 50
+                                },
+                                {
+                                    "color": "yellow",
+                                    "value": 70
+                                },
+                                {
+                                    "color": "red",
+                                    "value": 85
+                                }
+                            ]
+                        },
+                        "unit": "percent"
+                    }
+                },
+                "options": {
+                    "orientation": "auto",
+                    "textMode": "auto",
+                    "colorMode": "value",
+                    "graphMode": "area",
+                    "justifyMode": "auto",
+                    "displayMode": "lcd"
+                }
+            },
+            {
+                "id": 3,
+                "title": "Histórico de Temperatura (últimas 6h)",
+                "type": "timeseries",
+                "gridPos": {
+                    "h": 8,
+                    "w": 24,
+                    "x": 0,
+                    "y": 8
+                },
+                "targets": [
+                    {
+                        "rawSql": "SELECT time, temperature, device_id FROM temperature_metrics WHERE time > NOW() - INTERVAL '6 hours' ORDER BY time",
+                        "refId": "A",
+                        "format": "time_series"
+                    }
+                ],
+                "fieldConfig": {
+                    "defaults": {
+                        "color": {
+                            "mode": "palette-classic"
+                        },
+                        "custom": {
+                            "axisCenteredZero": false,
+                            "axisColorMode": "text",
+                            "axisLabel": "Temperatura (°C)",
+                            "axisPlacement": "auto",
+                            "fillOpacity": 10,
+                            "gradientMode": "none",
+                            "hideFrom": {
+                                "tooltip": false,
+                                "viz": false,
+                                "legend": false
+                            },
+                            "scaleDistribution": {
+                                "type": "linear"
+                            },
+                            "showPoints": "never",
+                            "spanNulls": true,
+                            "stacking": {
+                                "group": "A",
+                                "mode": "none"
+                            },
+                            "thresholdsStyle": {
+                                "mode": "off"
+                            }
+                        },
+                        "mappings": [],
+                        "thresholds": {
+                            "mode": "absolute",
+                            "steps": [
+                                {
+                                    "color": "green",
+                                    "value": null
+                                }
+                            ]
+                        },
+                        "unit": "celsius"
+                    }
+                },
+                "options": {
+                    "legend": {
+                        "calcs": [
+                            "last",
+                            "mean",
+                            "max",
+                            "min"
+                        ],
+                        "displayMode": "table",
+                        "placement": "bottom"
+                    },
+                    "tooltip": {
+                        "mode": "multi",
+                        "sort": "none"
+                    }
+                }
+            },
+            {
+                "id": 4,
+                "title": "Histórico de Umidade (últimas 6h)",
+                "type": "timeseries",
+                "gridPos": {
+                    "h": 8,
+                    "w": 24,
+                    "x": 0,
+                    "y": 16
+                },
+                "targets": [
+                    {
+                        "rawSql": "SELECT time, humidity, device_id FROM temperature_metrics WHERE time > NOW() - INTERVAL '6 hours' AND humidity IS NOT NULL ORDER BY time",
+                        "refId": "A",
+                        "format": "time_series"
+                    }
+                ],
+                "fieldConfig": {
+                    "defaults": {
+                        "color": {
+                            "mode": "palette-classic"
+                        },
+                        "custom": {
+                            "axisCenteredZero": false,
+                            "axisColorMode": "text",
+                            "axisLabel": "Umidade (%)",
+                            "axisPlacement": "auto",
+                            "fillOpacity": 10,
+                            "gradientMode": "none",
+                            "hideFrom": {
+                                "tooltip": false,
+                                "viz": false,
+                                "legend": false
+                            },
+                            "scaleDistribution": {
+                                "type": "linear"
+                            },
+                            "showPoints": "never",
+                            "spanNulls": true,
+                            "stacking": {
+                                "group": "A",
+                                "mode": "none"
+                            },
+                            "thresholdsStyle": {
+                                "mode": "off"
+                            }
+                        },
+                        "mappings": [],
+                        "thresholds": {
+                            "mode": "absolute",
+                            "steps": [
+                                {
+                                    "color": "green",
+                                    "value": null
+                                }
+                            ]
+                        },
+                        "unit": "percent"
+                    }
+                },
+                "options": {
+                    "legend": {
+                        "calcs": [
+                            "last",
+                            "mean",
+                            "max",
+                            "min"
+                        ],
+                        "displayMode": "table",
+                        "placement": "bottom"
+                    },
+                    "tooltip": {
+                        "mode": "multi",
+                        "sort": "none"
+                    }
+                }
+            }
+        ]
+    }
+}
