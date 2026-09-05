@@ -1,0 +1,8 @@
+# Ignora arquivos desnecessários ao build da imagem do producer/consumer.
+# O contexto de build é a pasta da aula (..); só precisamos de scripts/.
+.venv/
+__pycache__/
+*.pyc
+*.log
+docker/
+*.md

@@ -1,0 +1,10 @@
+# Ignora arquivos desnecessários ao build da imagem.
+# O contexto de build é a pasta da aula (..); precisamos de scripts/ e data/.
+.venv/
+__pycache__/
+*.pyc
+*.log
+docker/
+outputs/
+outputs_example/
+*.md

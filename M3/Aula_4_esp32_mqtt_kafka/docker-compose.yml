@@ -1,0 +1,41 @@
+name: opaiot-aula4
+
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports:
+      - "${MQTT_PORT:-1883}:1883"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    restart: unless-stopped
+    networks:
+      - aula4-iot
+
+
+  mqtt-kafka-producer:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    depends_on:
+      mosquitto:
+        condition: service_started
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      MQTT_HOST: ${MQTT_HOST:-mosquitto}
+      MQTT_PORT: ${MQTT_PORT:-1883}
+      MQTT_TOPIC: ${MQTT_TOPIC:-opaiot/air_quality}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-host.docker.internal:29092}
+      KAFKA_TOPIC: ${KAFKA_TOPIC:-iot.air_quality}
+      DEFAULT_SENSOR_ID: ${DEFAULT_SENSOR_ID:-sensor-01}
+      DEFAULT_ROOM: ${DEFAULT_ROOM:-lab-01}
+      DEFAULT_CO2: ${DEFAULT_CO2:-800}
+    restart: unless-stopped
+    networks:
+      - aula4-iot
+
+
+networks:
+  aula4-iot:
+    driver: bridge

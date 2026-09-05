@@ -1,0 +1,60 @@
+services:
+
+  influxdb:
+    image: influxdb:2.7
+    container_name: iot_influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: adminpass123
+      DOCKER_INFLUXDB_INIT_ORG: iot_org
+      DOCKER_INFLUXDB_INIT_BUCKET: iot_data
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: myinfluxtoken
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: iot_backend
+    restart: unless-stopped
+    depends_on:
+      influxdb:
+        condition: service_healthy
+    environment:
+      MQTT_BROKER: broker.emqx.io
+      MQTT_PORT: 1883
+      MQTT_TOPIC: aula/opaiot/accelerometer
+      INFLUX_URL: http://influxdb:8086
+      INFLUX_TOKEN: myinfluxtoken
+      INFLUX_ORG: iot_org
+      INFLUX_BUCKET: iot_data
+      WINDOW_SIZE: 256
+      SAMPLE_RATE: 20.0
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: iot_grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      influxdb:
+        condition: service_healthy
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - grafana_data:/var/lib/grafana
+
+volumes:
+  influxdb_data:
+  grafana_data:

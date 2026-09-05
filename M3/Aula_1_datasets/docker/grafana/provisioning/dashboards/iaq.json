@@ -1,0 +1,117 @@
+{
+  "id": null,
+  "uid": "opaiot-iaq",
+  "title": "OpAIoT - IAQ Datasets",
+  "tags": ["opaiot", "iaq", "datasets"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Valores dos sensores (IAQ)",
+      "datasource": { "type": "prometheus", "uid": "prometheus-iaq" },
+      "gridPos": { "h": 9, "w": 16, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "opaiot_iaq_sensor_value",
+          "legendFormat": "{{metric}} ({{unit}}) - {{device_id}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Total de linhas do dataset",
+      "datasource": { "type": "prometheus", "uid": "prometheus-iaq" },
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 0 },
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        { "refId": "A", "expr": "opaiot_iaq_dataset_rows", "legendFormat": "linhas" }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Métricas ativas exportadas",
+      "datasource": { "type": "prometheus", "uid": "prometheus-iaq" },
+      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 4 },
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        { "refId": "A", "expr": "opaiot_iaq_active_metrics", "legendFormat": "colunas" }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Flag de anomalia por métrica",
+      "datasource": { "type": "prometheus", "uid": "prometheus-iaq" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "min": 0, "max": 1 },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "opaiot_iaq_anomaly_flag",
+          "legendFormat": "{{metric}} - {{device_id}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Linha atual do stream (CSV)",
+      "datasource": { "type": "prometheus", "uid": "prometheus-iaq" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 9 },
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "opaiot_iaq_stream_index",
+          "legendFormat": "stream_index"
+        }
+      ]
+    }
+  ]
+}

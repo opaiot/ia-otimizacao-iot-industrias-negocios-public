@@ -1,0 +1,26 @@
+{
+    "name": "iot-backend",
+    "version": "1.0.0",
+    "description": "Backend IoT com MQTT, PostgreSQL e TimescaleDB",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js",
+        "dev": "nodemon index.js"
+    },
+    "keywords": [
+        "mqtt",
+        "postgresql",
+        "timescaledb",
+        "iot"
+    ],
+    "author": "",
+    "license": "MIT",
+    "dependencies": {
+        "mqtt": "^5.3.5",
+        "pg": "^8.11.3",
+        "dotenv": "^16.3.1"
+    },
+    "devDependencies": {
+        "nodemon": "^3.0.2"
+    }
+}

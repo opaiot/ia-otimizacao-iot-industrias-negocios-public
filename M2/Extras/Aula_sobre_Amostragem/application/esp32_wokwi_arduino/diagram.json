@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "author": "IoT MPU6050 Arduino/Wokwi",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "wokwi-esp32-devkit-v1",
+      "id": "esp32",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-mpu6050",
+      "id": "mpu1",
+      "top": 100,
+      "left": 300,
+      "attrs": {
+        "accelRange": "2",
+        "gyroRange": "250"
+      }
+    }
+  ],
+  "connections": [
+    ["esp32:GND.1", "mpu1:GND", "black",  []],
+    ["esp32:3V3",   "mpu1:VCC", "red",    []],
+    ["esp32:D21",   "mpu1:SDA", "green",  []],
+    ["esp32:D22",   "mpu1:SCL", "yellow", []]
+  ],
+  "dependencies": {}
+}

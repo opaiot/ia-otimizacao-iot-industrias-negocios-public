@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sensor-simulator
+  namespace: opaiot-p5
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sensor-simulator
+  template:
+    metadata:
+      labels:
+        app: sensor-simulator
+    spec:
+      containers:
+        - name: sensor-simulator
+          # Construa a imagem localmente antes de aplicar em Minikube/K3s/KillerCoda.
+          image: opaiot/sensor-simulator:local
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: MQTT_HOST
+              value: mosquitto
+            - name: MQTT_PORT
+              value: "1883"
+            - name: MQTT_TOPIC
+              value: iot/device-001/telemetry
+            - name: DEVICE_ID
+              value: device-001
+            - name: PUBLISH_INTERVAL
+              value: "2"

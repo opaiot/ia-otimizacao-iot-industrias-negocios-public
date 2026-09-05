@@ -1,0 +1,15 @@
+# Provider de dashboards: carrega os JSON desta pasta na pasta "OpAIoT".
+apiVersion: 1
+
+providers:
+  - name: opaiot
+    orgId: 1
+    folder: OpAIoT
+    folderUid: opaiot
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
+      foldersFromFilesStructure: false

@@ -1,0 +1,11 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus (Andromeda)
+    type: prometheus
+    access: proxy
+    url: http://andromeda.lasdpc.icmc.usp.br:19201
+    isDefault: true
+    editable: true
+    jsonData:
+      httpMethod: GET

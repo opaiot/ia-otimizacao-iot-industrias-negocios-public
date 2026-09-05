@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-ui
+  namespace: opaiot-p5
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-ui
+  template:
+    metadata:
+      labels:
+        app: kafka-ui
+    spec:
+      containers:
+        - name: kafka-ui
+          image: provectuslabs/kafka-ui:latest
+          ports:
+            - containerPort: 8080
+              name: web
+          env:
+            - name: KAFKA_CLUSTERS_0_NAME
+              value: opaiot-k8s
+            - name: KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS
+              value: kafka:9092
+            - name: DYNAMIC_CONFIG_ENABLED
+              value: "false"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-ui
+  namespace: opaiot-p5
+spec:
+  type: NodePort
+  selector:
+    app: kafka-ui
+  ports:
+    - name: web
+      port: 8080
+      targetPort: web
+      nodePort: 30080

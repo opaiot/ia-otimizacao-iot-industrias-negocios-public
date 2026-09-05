@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: opaiot-mosquitto
+    restart: unless-stopped
+    ports:
+      - "20202:1883"   # MQTT
+      - "20203:9001"   # MQTT via WebSocket
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: opaiot-grafana
+    restart: unless-stopped
+    ports:
+      - "9001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./grafana/data:/var/lib/grafana
+    depends_on:
+      - mosquitto

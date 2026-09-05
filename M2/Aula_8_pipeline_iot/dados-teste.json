@@ -1,0 +1,62 @@
+[
+    {
+        "temperature": 22.5,
+        "humidity": 55.0,
+        "deviceId": "esp32-dht22",
+        "location": "sala"
+    },
+    {
+        "temperature": 22.8,
+        "humidity": 54.5,
+        "deviceId": "esp32-dht22",
+        "location": "sala"
+    },
+    {
+        "temperature": 23.1,
+        "humidity": 53.8,
+        "deviceId": "esp32-dht22",
+        "location": "sala"
+    },
+    {
+        "temperature": 23.5,
+        "humidity": 52.5,
+        "deviceId": "esp32-dht22",
+        "location": "sala"
+    },
+    {
+        "temperature": 24.0,
+        "humidity": 51.2,
+        "deviceId": "esp32-dht22",
+        "location": "sala"
+    },
+    {
+        "temperature": 24.5,
+        "humidity": 50.0,
+        "deviceId": "esp32-dht22",
+        "location": "sala"
+    },
+    {
+        "temperature": 25.0,
+        "humidity": 60.0,
+        "deviceId": "esp32-dht22",
+        "location": "sala"
+    },
+    {
+        "temperature": 25.5,
+        "humidity": 61.2,
+        "deviceId": "esp32-dht22",
+        "location": "sala"
+    },
+    {
+        "temperature": 26.0,
+        "humidity": 62.5,
+        "deviceId": "esp32-dht22",
+        "location": "sala"
+    },
+    {
+        "temperature": 25.8,
+        "humidity": 63.0,
+        "deviceId": "esp32-dht22",
+        "location": "sala"
+    }
+]
