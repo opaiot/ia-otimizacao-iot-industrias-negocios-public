@@ -28,7 +28,7 @@ O script aceita mensagens já no formato da Aula 3 ou converte automaticamente p
 
 O firmware desta aula em [firmware/esp32_mq7_mqtt.ino](../firmware/esp32_mq7_mqtt.ino) já publica no formato da Aula 3.
 
-Exemplo alternativo compatível com o ESP32 da [Aula 8](../../../Modulo_2/Aula_8_pipeline_iot/esp32_dht22_mqtt.ino):
+Exemplo alternativo compatível com o ESP32 da [Aula 8](../../../M2/Aula_8_pipeline_iot/esp32_dht22_mqtt.ino):
 
 ```json
 {
