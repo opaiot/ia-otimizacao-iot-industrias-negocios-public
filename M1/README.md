@@ -6,29 +6,29 @@ Este repositório publica notebooks para as Aulas 1 a 26, exceto a Aula 6: ela �
 
 ## Ordem sugerida
 
-1. Comece pelas [Aulas 1-5 - Estatística Descritiva](colab/M1_Aulas_1_5_Aplicação_Prática_01.ipynb) para praticar medidas de localização/espalhamento, distribuições e correlação com Pandas.
-2. Siga para as [Aulas 7-9 - Tratamento de Dados](colab/M1_Aulas_7_9_Aplicação_Prática_02.ipynb) e trate valores ausentes, duplicatas, inconsistências e outliers.
-3. Avance para as [Aulas 10-15 - Transformação e Seleção de Atributos](colab/M1_Aulas_10_15_Aplicação_Prática_03.ipynb) com encoding, discretização, escalonamento e seleção de variáveis.
-4. Feche o módulo com as [Aulas 16-26 - Modelagem Preditiva](colab/M1_Aulas_16_26_Aplicação_Prática_04.ipynb), que cobre regressão, classificação e `Pipeline` do scikit-learn.
+1. Comece pelas [Aulas 1-5 - Estatística Descritiva](colab/M1_Aplicação_Prática_01.ipynb) para praticar medidas de localização/espalhamento, distribuições e correlação com Pandas.
+2. Siga para as [Aulas 7-9 - Tratamento de Dados](colab/M1_Aplicação_Prática_02.ipynb) e trate valores ausentes, duplicatas, inconsistências e outliers.
+3. Avance para as [Aulas 10-15 - Transformação e Seleção de Atributos](colab/M1_Aplicação_Prática_03.ipynb) com encoding, discretização, escalonamento e seleção de variáveis.
+4. Feche o módulo com as [Aulas 16-26 - Modelagem Preditiva](colab/M1_Aplicação_Prática_04.ipynb), que cobre regressão, classificação e `Pipeline` do scikit-learn.
 
 ## Aulas
 
 | Aulas | Notebook | Conteúdo |
 | --- | --- | --- |
-| 1-5 | [M1_Aulas_1_5_Aplicação_Prática_01.ipynb](colab/M1_Aulas_1_5_Aplicação_Prática_01.ipynb) | Estatística descritiva e visualização multivariada: medidas de localização e espalhamento, quantis, boxplot, obliquidade/curtose, matriz de correlação (heatmap), scatter plots e agregações com `groupby`. |
-| 7-9 | [M1_Aulas_7_9_Aplicação_Prática_02.ipynb](colab/M1_Aulas_7_9_Aplicação_Prática_02.ipynb) | Tratamento de dados: diagnóstico de valores ausentes, remoção de duplicatas e atributos redundantes, padronização de categorias e datas, imputação (média/mediana/moda) e detecção de outliers (IQR, z-score, DBSCAN). |
-| 10-15 | [M1_Aulas_10_15_Aplicação_Prática_03.ipynb](colab/M1_Aulas_10_15_Aplicação_Prática_03.ipynb) | Transformação de dados e seleção de atributos: encoding de categorias (One-Hot, Ordinal, Frequency), discretização (largura/frequência igual, k-means), escalonamento (Standard/MinMax/Robust) e seleção de atributos (Filter, Wrapper/RFE, Embedded/Lasso, importância em árvores). |
-| 16-26 | [M1_Aulas_16_26_Aplicação_Prática_04.ipynb](colab/M1_Aulas_16_26_Aplicação_Prática_04.ipynb) | Modelagem preditiva com scikit-learn: regressão (Linear, Ridge, Lasso) e classificação (Logística, Árvore de Decisão, Random Forest, XGBoost), métricas (MAE/RMSE/R², matriz de confusão, ROC/AUC) e `Pipeline` com busca de hiperparâmetros. |
+| 1-5 | [M1_Aplicação_Prática_01.ipynb](colab/M1_Aplicação_Prática_01.ipynb) | Estatística descritiva e visualização multivariada: medidas de localização e espalhamento, quantis, boxplot, obliquidade/curtose, matriz de correlação (heatmap), scatter plots e agregações com `groupby`. |
+| 7-9 | [M1_Aplicação_Prática_02.ipynb](colab/M1_Aplicação_Prática_02.ipynb) | Tratamento de dados: diagnóstico de valores ausentes, remoção de duplicatas e atributos redundantes, padronização de categorias e datas, imputação (média/mediana/moda) e detecção de outliers (IQR, z-score, DBSCAN). |
+| 10-15 | [M1_Aplicação_Prática_03.ipynb](colab/M1_Aplicação_Prática_03.ipynb) | Transformação de dados e seleção de atributos: encoding de categorias (One-Hot, Ordinal, Frequency), discretização (largura/frequência igual, k-means), escalonamento (Standard/MinMax/Robust) e seleção de atributos (Filter, Wrapper/RFE, Embedded/Lasso, importância em árvores). |
+| 16-26 | [M1_Aplicação_Prática_04.ipynb](colab/M1_Aplicação_Prática_04.ipynb) | Modelagem preditiva com scikit-learn: regressão (Linear, Ridge, Lasso) e classificação (Logística, Árvore de Decisão, Random Forest, XGBoost), métricas (MAE/RMSE/R², matriz de confusão, ROC/AUC) e `Pipeline` com busca de hiperparâmetros. |
 
 ## Estrutura
 
 ```text
 M1/
 └── colab/
-    ├── M1_Aulas_1_5_Aplicação_Prática_01.ipynb
-    ├── M1_Aulas_7_9_Aplicação_Prática_02.ipynb
-    ├── M1_Aulas_10_15_Aplicação_Prática_03.ipynb
-    └── M1_Aulas_16_26_Aplicação_Prática_04.ipynb
+    ├── M1_Aplicação_Prática_01.ipynb
+    ├── M1_Aplicação_Prática_02.ipynb
+    ├── M1_Aplicação_Prática_03.ipynb
+    └── M1_Aplicação_Prática_04.ipynb
 ```
 
 ## Ambiente de execução
