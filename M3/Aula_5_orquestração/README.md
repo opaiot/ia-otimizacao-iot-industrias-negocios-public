@@ -1,4 +1,4 @@
-# Aula 5 - Orquestração com Docker Compose, Kubernetes e IoT
+# Prática 5 - Orquestração com Docker Compose, Kubernetes e IoT
 
 Esta prática demonstra uma stack IoT local com Docker Compose e uma leitura equivalente, simplificada e didática, em Kubernetes.
 
