@@ -1,4 +1,4 @@
-# Aula 4 - MQTT para Kafka
+# Prática 4 - MQTT para Kafka
 
 Esta aula conecta telemetria MQTT ao tópico Kafka `iot.air_quality` da [Aula 3](../Aula_3_kafka/README.md), mantendo o mesmo formato de evento usado pelo `producer.py` da prática anterior.
 
