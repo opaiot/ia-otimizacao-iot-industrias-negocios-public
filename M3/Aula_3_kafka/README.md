@@ -1,4 +1,4 @@
-# Aula 3 - Apache Kafka para telemetria IoT observável
+# Prática 3 - Apache Kafka para telemetria IoT observável
 
 Esta aula prática apresenta o Apache Kafka como infraestrutura para pipelines orientados a eventos em IoT. O cenário simula sensores ambientais enviando medições para um tópico Kafka, consumidores processando esses eventos e métricas sendo expostas para Prometheus e Grafana.
 
