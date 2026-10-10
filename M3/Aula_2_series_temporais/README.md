@@ -1,4 +1,4 @@
-# Aula 2 - Séries Temporais com Grafana
+# Prática 2 - Séries Temporais com Grafana
 
 Esta aula usa o Grafana para visualizar séries temporais disponíveis em um Prometheus. Há duas formas de executar a prática:
 
