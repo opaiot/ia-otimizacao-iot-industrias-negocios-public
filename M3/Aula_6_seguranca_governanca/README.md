@@ -1,4 +1,4 @@
-# OPAIoT - Grafana + Mosquitto MQTT
+# Prática 6 - Segurança e Governança com Grafana e Mosquitto MQTT
 
 Este pacote contém um ambiente Docker simples para aula de segurança e governança usando MQTT e Grafana.
 
