@@ -1,4 +1,4 @@
-# Aula 1 - Datasets
+# Prática 1 - Datasets
 
 Esta aula usa um dataset de qualidade do ar em ambientes internos para praticar inspeção de dados, normalização de eventos IoT e exposição de métricas Prometheus.
 
