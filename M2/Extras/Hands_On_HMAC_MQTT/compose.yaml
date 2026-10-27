@@ -1,0 +1,82 @@
+services:
+  broker:
+    image: eclipse-mosquitto:2.0.18
+    container_name: mqtt-broker
+    restart: unless-stopped
+    # Roda com o UID/GID do host (definidos em .env por setup.sh) para que o
+    # entrypoint da imagem não faça "chown -R" em /mosquitto e troque o
+    # dono dos arquivos de config/certs/dados para um uid do container.
+    user: "${UID}:${GID}"
+    ports:
+      - "8883:8883"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/certs:/mosquitto/certs:ro
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    networks:
+      - mqttnet
+
+  subscriber:
+    build: ./subscriber
+    container_name: mqtt-subscriber
+    restart: unless-stopped
+    depends_on:
+      - broker
+    env_file:
+      - ./subscriber/.env
+    volumes:
+      - ./mosquitto/certs/ca.crt:/certs/ca.crt:ro
+    networks:
+      - mqttnet
+
+  device-simulator:
+    build: ./simulator
+    container_name: mqtt-device-simulator
+    restart: unless-stopped
+    depends_on:
+      - broker
+    env_file:
+      - ./simulator/.env
+    environment:
+      # Número de dispositivos simulados (cada um em sua própria thread),
+      # sobrescrevível com: SIM_DEVICE_COUNT=20 docker compose up -d
+      - SIM_DEVICE_COUNT=${SIM_DEVICE_COUNT:-5}
+    volumes:
+      - ./mosquitto/certs/ca.crt:/certs/ca.crt:ro
+    networks:
+      - mqttnet
+
+  attacker:
+    build: ./attacker
+    container_name: mqtt-attacker
+    restart: unless-stopped
+    depends_on:
+      - broker
+    env_file:
+      - ./attacker/.env
+    volumes:
+      - ./mosquitto/certs/ca.crt:/certs/ca.crt:ro
+    networks:
+      - mqttnet
+
+  dashboard:
+    build: ./dashboard
+    container_name: mqtt-dashboard
+    restart: unless-stopped
+    depends_on:
+      - broker
+    env_file:
+      - ./dashboard/.env
+    ports:
+      # Porta do host configurável em .env (DASHBOARD_PORT); troque se 8080
+      # já estiver em uso. O painel sempre escuta 8080 dentro do container.
+      - "${DASHBOARD_PORT:-8080}:8080"
+    volumes:
+      - ./mosquitto/certs/ca.crt:/certs/ca.crt:ro
+    networks:
+      - mqttnet
+
+networks:
+  mqttnet:
+    driver: bridge
