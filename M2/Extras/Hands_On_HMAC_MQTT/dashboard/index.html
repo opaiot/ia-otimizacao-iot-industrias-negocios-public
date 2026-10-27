@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ESP32 MQTT Security Lab</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --panel2: #1c232d;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --red: #f85149;
+    --orange: #d29922;
+    --purple: #bc8cff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 16px; }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap; margin-bottom: 16px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .logo { font-size: 32px; }
+  header h1 { font-size: 20px; margin: 0; }
+  header .sub { margin: 0; color: var(--muted); font-size: 13px; }
+  .conn { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); transition: background .2s; }
+  .dot.on { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .dot.off { background: var(--red); }
+
+  .attack-banner {
+    background: linear-gradient(90deg, rgba(248,81,73,.18), rgba(248,81,73,.06));
+    border: 1px solid var(--red);
+    color: #ffb4b0;
+    border-radius: 10px; padding: 12px 16px; margin-bottom: 16px;
+    font-weight: 600; letter-spacing: .3px;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(248,81,73,.35); } 50% { box-shadow: 0 0 0 6px rgba(248,81,73,0); } }
+  .hidden { display: none; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px;
+  }
+  h2 { font-size: 15px; margin: 0 0 4px; }
+  .muted { color: var(--muted); font-size: 13px; margin: 0; }
+
+  .control {
+    display: flex; align-items: center; gap: 20px; margin-bottom: 16px;
+  }
+  .control > div:first-child { flex: 1; min-width: 0; }
+  .switch { position: relative; display: inline-block; width: 64px; height: 34px; flex: none; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; cursor: pointer; inset: 0;
+    background: #2d333b; border: 1px solid var(--border);
+    border-radius: 34px; transition: .25s;
+  }
+  .slider::before {
+    content: ""; position: absolute; height: 24px; width: 24px;
+    left: 4px; bottom: 4px; background: #c9d1d9; border-radius: 50%; transition: .25s;
+  }
+  input:checked + .slider { background: var(--red); border-color: var(--red); }
+  input:checked + .slider::before { transform: translateX(30px); background: #fff; }
+  .switch-state {
+    font-weight: 700; font-size: 13px; letter-spacing: .5px; min-width: 76px;
+    text-align: center; color: var(--muted); flex: none;
+  }
+  .switch-state.active { color: var(--red); }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+  .tab {
+    padding: 9px 18px; cursor: pointer; color: var(--muted);
+    border-bottom: 2px solid transparent; font-weight: 600; user-select: none;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  .tile {
+    background: var(--panel); border: 1px solid var(--border);
+    border-left-width: 4px; border-radius: 10px; padding: 14px 16px;
+  }
+  .tile .num { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .tile .lbl { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+  .tile.valid { border-left-color: var(--green); }
+  .tile.valid .num { color: var(--green); }
+  .tile.tamper { border-left-color: var(--red); }
+  .tile.tamper .num { color: var(--red); }
+  .tile.forged { border-left-color: var(--purple); }
+  .tile.forged .num { color: var(--purple); }
+  .tile.replay { border-left-color: var(--orange); }
+  .tile.replay .num { color: var(--orange); }
+
+  section.block { margin-bottom: 16px; }
+  .devices { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .dev {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px;
+  }
+  .dev-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .dev-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dev-dot.valid { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .dev-dot.bad { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  .dev-id { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dev-temp { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .dev-meta { color: var(--muted); font-size: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+  .feed {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; max-height: 420px; overflow-y: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px;
+  }
+  .row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 12px; border-bottom: 1px solid var(--border); border-left: 3px solid transparent;
+  }
+  .row:last-child { border-bottom: none; }
+  .row.VALIDA { border-left-color: var(--green); }
+  .row.REJEITADA { border-left-color: var(--red); background: rgba(248,81,73,.05); }
+  .row.REJEITADA.replay { border-left-color: var(--orange); background: rgba(210,153,34,.05); }
+  .row.REJEITADA.forged { border-left-color: var(--purple); background: rgba(188,140,255,.05); }
+  .row.DESCARTADA { border-left-color: var(--muted); }
+  .row.system { border-left-color: var(--accent); color: var(--accent); }
+  .time { color: var(--muted); flex: none; }
+  .badge {
+    flex: none; padding: 1px 8px; border-radius: 20px; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .4px;
+  }
+  .badge.VALIDA { background: rgba(63,185,80,.15); color: var(--green); }
+  .badge.tamper { background: rgba(248,81,73,.15); color: var(--red); }
+  .badge.forged { background: rgba(188,140,255,.15); color: var(--purple); }
+  .badge.replay { background: rgba(210,153,34,.15); color: var(--orange); }
+  .badge.DESCARTADA { background: rgba(139,148,158,.15); color: var(--muted); }
+  .row .rdev { color: var(--text); flex: none; min-width: 112px; }
+  .row .detail { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; color: var(--muted); font-size: 12px; margin-top: 8px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+  /* ---- Topologia ---- */
+  .topo-wrap { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 8px; }
+  #topo { width: 100%; height: auto; display: block; }
+  .edge { stroke: var(--border); stroke-width: 1.5; fill: none; transition: stroke .15s; }
+  .edge.attack { stroke: rgba(248,81,73,.35); stroke-dasharray: 5 5; }
+  .edge.hot { stroke: var(--accent); }
+  .edge.attack.hot { stroke: var(--red); }
+  .node circle { stroke-width: 2; transition: filter .2s; }
+  /* preenchimentos opacos: as arestas não devem aparecer através dos nós */
+  .node.broker circle { fill: #182e4e; stroke: var(--accent); }
+  .node.sub circle { fill: #1d3429; stroke: var(--green); }
+  .node.dash circle { fill: #1f2f41; stroke: var(--accent); }
+  .node.attacker circle { fill: #362327; stroke: var(--red); }
+  .node.dev circle { fill: #262c33; stroke: var(--muted); }
+  .node .nlabel { fill: var(--text); font-size: 12px; text-anchor: middle; font-weight: 700; }
+  .node .nsub { fill: var(--muted); font-size: 10px; text-anchor: middle; }
+  .node .dlabel { fill: var(--muted); font-size: 10px; text-anchor: start; dominant-baseline: central; }
+  .node .icon { fill: var(--text); font-size: 18px; text-anchor: middle; dominant-baseline: central; }
+  .node .nlabel, .node .nsub, .node .dlabel {
+    paint-order: stroke; stroke: var(--panel); stroke-width: 5px; stroke-linejoin: round;
+  }
+  .node.attacker.active circle { fill: #703132; filter: drop-shadow(0 0 7px var(--red)); }
+  .node.pulse-green circle { filter: drop-shadow(0 0 8px var(--green)); }
+  .node.pulse-red circle { filter: drop-shadow(0 0 8px var(--red)); }
+  .node.pulse-blue circle { filter: drop-shadow(0 0 8px var(--accent)); }
+  .pkt { stroke: rgba(13,17,23,.6); stroke-width: .5; }
+
+  @media (max-width: 680px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .row .dev { min-width: 90px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <span class="logo">🔐</span>
+      <div>
+        <h1>ESP32 MQTT Security Lab</h1>
+        <p class="sub">Painel de controle e monitoramento</p>
+      </div>
+    </div>
+    <div class="conn"><span id="dot" class="dot"></span><span id="connText">conectando…</span></div>
+  </header>
+
+  <div id="attackBanner" class="attack-banner hidden">⚠ ATACANTE ATIVO — injetando mensagens maliciosas na rede</div>
+
+  <section class="card control block">
+    <div>
+      <h2>Agente malicioso</h2>
+      <p class="muted">Intercepta as mensagens dos dispositivos e tenta adulterá-las, forjá-las e repeti-las (replay). Todas devem ser rejeitadas pelo consumidor.</p>
+    </div>
+    <label class="switch">
+      <input type="checkbox" id="attackerToggle">
+      <span class="slider"></span>
+    </label>
+    <div class="switch-state" id="switchState">INATIVO</div>
+  </section>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="monitor">Monitor</div>
+    <div class="tab" data-tab="topo">Topologia</div>
+  </div>
+
+  <div id="panel-monitor" class="panel active">
+    <section class="stats">
+      <div class="tile valid"><div class="num" id="cValid">0</div><div class="lbl">Válidas</div></div>
+      <div class="tile tamper"><div class="num" id="cTamper">0</div><div class="lbl">Adulteradas</div></div>
+      <div class="tile forged"><div class="num" id="cForged">0</div><div class="lbl">Forjadas</div></div>
+      <div class="tile replay"><div class="num" id="cReplay">0</div><div class="lbl">Replay</div></div>
+    </section>
+
+    <section class="block">
+      <h2>Dispositivos</h2>
+      <div id="devices" class="devices"></div>
+    </section>
+
+    <section class="block">
+      <h2>Eventos ao vivo</h2>
+      <div id="feed" class="feed"></div>
+      <div class="legend">
+        <span><i style="background:var(--green)"></i> válida</span>
+        <span><i style="background:var(--red)"></i> adulterada</span>
+        <span><i style="background:var(--purple)"></i> forjada</span>
+        <span><i style="background:var(--orange)"></i> replay</span>
+      </div>
+    </section>
+  </div>
+
+  <div id="panel-topo" class="panel">
+    <div class="topo-wrap">
+      <svg id="topo" viewBox="0 0 820 540" preserveAspectRatio="xMidYMid meet">
+        <g id="edges"></g>
+        <g id="nodes"></g>
+        <g id="fx"></g>
+        <g id="packets"></g>
+      </svg>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--green)"></i> telemetria válida (dispositivo → broker → subscriber)</span>
+      <span><i style="background:var(--red)"></i> ataque injetado (atacante → broker)</span>
+      <span>pacote rejeitado = flash vermelho no subscriber</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const $ = (id) => document.getElementById(id);
+  const counts = { VALIDA: 0, tamper: 0, forged: 0, replay: 0 };
+  const devices = {};
+  const MAX_ROWS = 250;
+  let suppressToggle = false;
+  let topoActive = false;
+
+  /* ---------- controle do atacante ---------- */
+  const toggle = $("attackerToggle");
+  toggle.addEventListener("change", () => {
+    if (suppressToggle) return;
+    fetch("/api/attacker", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ active: toggle.checked }),
+    }).catch(() => {});
+  });
+
+  function setConn(ok) {
+    $("dot").className = "dot " + (ok ? "on" : "off");
+    $("connText").textContent = ok ? "conectado" : "reconectando…";
+  }
+
+  function setAttacker(active) {
+    suppressToggle = true;
+    toggle.checked = active;
+    suppressToggle = false;
+    $("switchState").textContent = active ? "ATIVO" : "INATIVO";
+    $("switchState").className = "switch-state" + (active ? " active" : "");
+    $("attackBanner").className = "attack-banner" + (active ? "" : " hidden");
+    const node = NODES.attacker && NODES.attacker.g;
+    if (node) {
+      node.classList.toggle("active", active);
+      node.querySelector(".nsub").textContent = active ? "ATIVO" : "inativo";
+    }
+  }
+
+  /* ---------- abas ---------- */
+  document.querySelectorAll(".tab").forEach((t) => {
+    t.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
+      document.querySelectorAll(".panel").forEach((x) => x.classList.remove("active"));
+      t.classList.add("active");
+      const name = t.dataset.tab;
+      $("panel-" + name).classList.add("active");
+      topoActive = name === "topo";
+    });
+  });
+
+  /* ---------- helpers ---------- */
+  function fmtTime(ts) {
+    const d = ts ? new Date(ts * 1000) : new Date();
+    return d.toLocaleTimeString("pt-BR", { hour12: false });
+  }
+  function colorFor(ev) {
+    if (ev.status === "VALIDA") return "var(--green)";
+    if (ev.attackKind === "replay") return "var(--orange)";
+    if (ev.attackKind === "forged") return "var(--purple)";
+    return "var(--red)";
+  }
+  function badgeFor(ev) {
+    if (ev.status === "VALIDA") return { cls: "VALIDA", text: "válida" };
+    if (ev.status === "DESCARTADA") return { cls: "DESCARTADA", text: "descartada" };
+    if (ev.attackKind === "replay") return { cls: "replay", text: "replay" };
+    if (ev.attackKind === "forged") return { cls: "forged", text: "forjada" };
+    return { cls: "tamper", text: "adulterada" };
+  }
+
+  /* ---------- painel monitor ---------- */
+  function bump(ev) {
+    if (ev.status === "VALIDA") counts.VALIDA++;
+    else if (ev.attackKind === "replay") counts.replay++;
+    else if (ev.attackKind === "forged") counts.forged++;
+    else if (ev.status === "REJEITADA") counts.tamper++;
+    $("cValid").textContent = counts.VALIDA;
+    $("cTamper").textContent = counts.tamper;
+    $("cForged").textContent = counts.forged;
+    $("cReplay").textContent = counts.replay;
+  }
+
+  function updateDevice(ev) {
+    if (!ev.device) return;
+    let card = devices[ev.device];
+    if (!card) {
+      card = document.createElement("div");
+      card.className = "dev";
+      card.innerHTML =
+        '<div class="dev-head"><span class="dev-dot"></span><span class="dev-id"></span></div>' +
+        '<div class="dev-temp">—</div><div class="dev-meta"></div>';
+      card.querySelector(".dev-id").textContent = ev.device;
+      $("devices").appendChild(card);
+      devices[ev.device] = card;
+    }
+    const ok = ev.status === "VALIDA";
+    card.querySelector(".dev-dot").className = "dev-dot " + (ok ? "valid" : "bad");
+    if (ok && ev.temp != null) card.querySelector(".dev-temp").textContent = Number(ev.temp).toFixed(2) + " °C";
+    const statusLabel = { VALIDA: "válida", REJEITADA: "rejeitada", DESCARTADA: "descartada" }[ev.status] || ev.status;
+    card.querySelector(".dev-meta").textContent = "seq " + (ev.seq ?? "—") + " · " + statusLabel;
+  }
+
+  function addRow(cls, time, badge, dev, detail) {
+    const feed = $("feed");
+    const row = document.createElement("div");
+    row.className = "row " + cls;
+    row.innerHTML =
+      '<span class="time"></span>' +
+      (badge ? '<span class="badge ' + badge.cls + '"></span>' : "") +
+      '<span class="rdev"></span><span class="detail"></span>';
+    row.querySelector(".time").textContent = time;
+    if (badge) row.querySelector(".badge").textContent = badge.text;
+    row.querySelector(".rdev").textContent = dev;
+    row.querySelector(".detail").textContent = detail;
+    feed.insertBefore(row, feed.firstChild);
+    while (feed.childElementCount > MAX_ROWS) feed.removeChild(feed.lastChild);
+  }
+
+  function onMessage(ev) {
+    bump(ev);
+    updateDevice(ev);
+    const badge = badgeFor(ev);
+    const cls = ev.status + (ev.attackKind === "replay" ? " replay" : ev.attackKind === "forged" ? " forged" : "");
+    const t = ev.temp != null ? Number(ev.temp).toFixed(2) + " °C" : "—";
+    const detail = "seq " + (ev.seq ?? "—") + " · " + t + " · " + ev.reason;
+    addRow(cls, fmtTime(ev.ts), badge, ev.device || "?", detail);
+    if (topoActive) spawnPacket(ev);
+  }
+
+  function addSystem(msg, ts) {
+    addRow("system", fmtTime(ts), null, "sistema", msg);
+  }
+
+  /* =======================================================
+     TOPOLOGIA — SVG animado
+     ======================================================= */
+  const NODES = {
+    // rótulo acima: a aresta do atacante desce do broker e cruzaria um rótulo embaixo
+    broker:     { x: 410, y: 258, r: 36, label: "BROKER", sub: "Mosquitto · TLS 8883", cls: "broker", icon: "🔒", labelAbove: true },
+    subscriber: { x: 702, y: 150, r: 28, label: "SUBSCRIBER", sub: "valida HMAC", cls: "sub", icon: "✓" },
+    dashboard:  { x: 702, y: 300, r: 26, label: "DASHBOARD", sub: "monitor", cls: "dash", icon: "📊" },
+    attacker:   { x: 410, y: 474, r: 30, label: "ATACANTE", sub: "inativo", cls: "attacker", icon: "☠" },
+  };
+  const topoDevices = {}; // id -> {x,y,r, g, edge}
+  let packets = [];
+
+  function mkEl(tag, attrs) {
+    const el = document.createElementNS(SVGNS, tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+
+  function createNode(cfg) {
+    const g = mkEl("g", { class: "node " + cfg.cls });
+    g.appendChild(mkEl("circle", { cx: cfg.x, cy: cfg.y, r: cfg.r }));
+    const icon = mkEl("text", { x: cfg.x, y: cfg.y, class: "icon" });
+    icon.textContent = cfg.icon;
+    g.appendChild(icon);
+    const labY = cfg.labelAbove ? cfg.y - cfg.r - 22 : cfg.y + cfg.r + 15;
+    const subY = cfg.labelAbove ? cfg.y - cfg.r - 8 : cfg.y + cfg.r + 29;
+    const lab = mkEl("text", { x: cfg.x, y: labY, class: "nlabel" });
+    lab.textContent = cfg.label;
+    g.appendChild(lab);
+    const sub = mkEl("text", { x: cfg.x, y: subY, class: "nsub" });
+    sub.textContent = cfg.sub;
+    g.appendChild(sub);
+    $("nodes").appendChild(g);
+    cfg.g = g;
+    return g;
+  }
+
+  function createEdge(cls) {
+    const e = mkEl("line", { class: "edge" + (cls ? " " + cls : "") });
+    $("edges").appendChild(e);
+    return e;
+  }
+
+  function setEdge(e, a, b) {
+    e.setAttribute("x1", a.x); e.setAttribute("y1", a.y);
+    e.setAttribute("x2", b.x); e.setAttribute("y2", b.y);
+  }
+
+  // edges estáticos
+  const edgeBrokerSub = createEdge();
+  const edgeBrokerDash = createEdge();
+  const edgeAttacker = createEdge("attack");
+
+  function initTopo() {
+    Object.values(NODES).forEach(createNode);
+    setEdge(edgeBrokerSub, NODES.broker, NODES.subscriber);
+    setEdge(edgeBrokerDash, NODES.broker, NODES.dashboard);
+    setEdge(edgeAttacker, NODES.attacker, NODES.broker);
+  }
+
+  function layoutDevices() {
+    const ids = Object.keys(topoDevices).sort();
+    const n = ids.length || 1;
+    const top = 70, bottom = 450, x = 108;
+    const r = Math.max(9, Math.min(18, Math.floor(170 / n)));
+    ids.forEach((id, i) => {
+      const d = topoDevices[id];
+      d.x = x;
+      d.y = n === 1 ? (top + bottom) / 2 : top + ((bottom - top) * i) / (n - 1);
+      d.r = r;
+      const showLabel = n <= 12;
+      d.g.querySelector("circle").setAttribute("cx", d.x);
+      d.g.querySelector("circle").setAttribute("cy", d.y);
+      d.g.querySelector("circle").setAttribute("r", d.r);
+      const lab = d.g.querySelector(".dlabel");
+      lab.setAttribute("x", d.x + d.r + 6);
+      lab.setAttribute("y", d.y);
+      lab.textContent = showLabel ? id.replace(/^esp32-?/, "") : "";
+      setEdge(d.edge, d, NODES.broker);
+    });
+  }
+
+  function ensureDevice(id) {
+    if (topoDevices[id]) return topoDevices[id];
+    const edge = createEdge();
+    const g = mkEl("g", { class: "node dev" });
+    g.appendChild(mkEl("circle", { cx: 0, cy: 0, r: 12 }));
+    g.appendChild(mkEl("text", { class: "dlabel" }));
+    const title = mkEl("title");
+    title.textContent = id;
+    g.appendChild(title);
+    $("nodes").appendChild(g);
+    topoDevices[id] = { x: 108, y: 250, r: 12, g, edge };
+    layoutDevices();
+    return topoDevices[id];
+  }
+
+  function pathInfo(pts) {
+    let L = 0;
+    const segs = [];
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1], b = pts[i];
+      const d = Math.hypot(b.x - a.x, b.y - a.y);
+      segs.push({ a, b, d, acc: L });
+      L += d;
+    }
+    return { L: L || 1, segs };
+  }
+  function pointAt(info, t) {
+    const target = t * info.L;
+    for (const s of info.segs) {
+      if (target <= s.acc + s.d) {
+        const f = s.d ? (target - s.acc) / s.d : 0;
+        return { x: s.a.x + (s.b.x - s.a.x) * f, y: s.a.y + (s.b.y - s.a.y) * f };
+      }
+    }
+    const last = info.segs[info.segs.length - 1];
+    return { x: last.b.x, y: last.b.y };
+  }
+
+  function flashEdge(edge) {
+    edge.classList.add("hot");
+    setTimeout(() => edge.classList.remove("hot"), 220);
+  }
+  function pulseNode(key, kind) {
+    const g = NODES[key] && NODES[key].g;
+    if (!g) return;
+    const cls = "pulse-" + kind;
+    g.classList.add(cls);
+    setTimeout(() => g.classList.remove(cls), 260);
+  }
+  function fxRing(pos, color) {
+    const ring = mkEl("circle", { cx: pos.x, cy: pos.y, r: 6, fill: "none", stroke: color, "stroke-width": 2 });
+    $("fx").appendChild(ring);
+    const start = performance.now();
+    (function grow(now) {
+      const p = Math.min(1, (now - start) / 420);
+      ring.setAttribute("r", 6 + p * 22);
+      ring.setAttribute("opacity", 1 - p);
+      if (p < 1) requestAnimationFrame(grow);
+      else ring.remove();
+    })(performance.now());
+  }
+
+  const PKT_SPEED = 300; // px/s
+  function spawnPacket(ev) {
+    if (!ev.device) return;
+    if (packets.length > 90) return;
+    const attack = ev.status !== "VALIDA";
+    let src, srcEdge, srcKey;
+    if (attack) {
+      src = NODES.attacker; srcEdge = edgeAttacker; srcKey = "attacker";
+    } else {
+      const d = ensureDevice(ev.device);
+      src = d; srcEdge = d.edge; srcKey = null;
+    }
+    const pts = [{ x: src.x, y: src.y }, { x: NODES.broker.x, y: NODES.broker.y },
+                 { x: NODES.subscriber.x, y: NODES.subscriber.y }];
+    const color = colorFor(ev);
+    const el = mkEl("circle", { r: attack ? 5.5 : 5, fill: color, class: "pkt", cx: src.x, cy: src.y });
+    $("packets").appendChild(el);
+    packets.push({ info: pathInfo(pts), el, t: 0, color, attack });
+    flashEdge(srcEdge);
+    if (srcKey) pulseNode(srcKey, "blue");
+  }
+
+  function arrive(p) {
+    const end = { x: NODES.subscriber.x, y: NODES.subscriber.y };
+    if (p.attack) {
+      fxRing(end, "var(--red)");
+      pulseNode("subscriber", "red");
+    } else {
+      fxRing(end, "var(--green)");
+      pulseNode("subscriber", "green");
+    }
+    pulseNode("broker", "blue");
+  }
+
+  let lastFrame = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - lastFrame) / 1000);
+    lastFrame = now;
+    for (const p of packets) {
+      if (p.done) continue;
+      p.t += (PKT_SPEED * dt) / p.info.L;
+      if (p.t >= 1) { p.t = 1; p.done = true; p.doneAt = now; arrive(p); }
+      const pos = pointAt(p.info, p.t);
+      p.el.setAttribute("cx", pos.x);
+      p.el.setAttribute("cy", pos.y);
+    }
+    packets = packets.filter((p) => {
+      if (p.done && now - p.doneAt > 80) { p.el.remove(); return false; }
+      return true;
+    });
+    requestAnimationFrame(frame);
+  }
+
+  /* ---------- SSE ---------- */
+  function handle(ev) {
+    if (ev.type === "hello") setAttacker(ev.attackerActive);
+    else if (ev.type === "attacker") { setAttacker(ev.active); addSystem(ev.active ? "Atacante ATIVADO" : "Atacante desativado", ev.ts); }
+    else if (ev.type === "system") addSystem(ev.message, ev.ts);
+    else if (ev.type === "message") onMessage(ev);
+  }
+
+  function connect() {
+    const es = new EventSource("/events");
+    es.onopen = () => setConn(true);
+    es.onerror = () => setConn(false);
+    es.onmessage = (e) => { try { handle(JSON.parse(e.data)); } catch (_) {} };
+  }
+
+  initTopo();
+  requestAnimationFrame(frame);
+  connect();
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+# Segredos e artefatos gerados pelo setup.sh
+/.env
+mosquitto/certs/*
+!mosquitto/certs/.gitkeep
+mosquitto/data/*
+!mosquitto/data/.gitkeep
+mosquitto/log/*
+!mosquitto/log/.gitkeep
+mosquitto/config/passwd
+
+subscriber/.env
+simulator/.env
+attacker/.env
+dashboard/.env
+
+esp32/secrets.h
+esp32/ca_cert.h
+.build/
+# Binários do Arduino IDE ("Exportar binário compilado") embutem o secrets.h
+*/build/
+
+.DS_Store
+__pycache__/
+*.pyc
