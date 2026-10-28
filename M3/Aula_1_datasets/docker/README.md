@@ -28,7 +28,7 @@ são usados **sem modificação**.
 
 ## Como subir
 
-A partir desta pasta (`Modulo_3/Aula_1_datasets/docker`):
+A partir desta pasta (`M3/Aula_1_datasets/docker`):
 
 ```bash
 docker compose up --build

@@ -125,8 +125,8 @@ Clone o repositório:
 
 ```bash
 cd ~
-git clone https://github.com/Smart-LaSDPC/opaIOT_2026.git
-cd opaIOT_2026/Modulo_3/Aula_1_datasets
+git clone https://github.com/opaiot/ia-otimizacao-iot-industrias-negocios-public.git
+cd ia-otimizacao-iot-industrias-negocios-public/M3/Aula_1_datasets
 ```
 
 ## 3. Preparar o ambiente Python
@@ -134,7 +134,7 @@ cd opaIOT_2026/Modulo_3/Aula_1_datasets
 Entre na pasta de scripts:
 
 ```bash
-cd ~/opaIOT_2026/Modulo_3/Aula_1_datasets/scripts
+cd ~/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_1_datasets/scripts
 ```
 
 Crie e ative um ambiente virtual:
@@ -162,7 +162,7 @@ python 1-inspect.py
 Os arquivos serão gerados em:
 
 ```text
-~/opaIOT_2026/Modulo_3/Aula_1_datasets/outputs/
+~/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_1_datasets/outputs/
 ```
 
 Se você ainda não executou o script, consulte `outputs_example/` para ver uma amostra dos arquivos esperados.
@@ -371,13 +371,13 @@ mkdir "$env:USERPROFILE\Downloads\opaIOT_Aula_1_datasets_outputs"
 Copie a pasta `outputs` da VM para o Windows:
 
 ```powershell
-scp -r "${VM_USER}@${VM_HOST}:~/opaIOT_2026/Modulo_3/Aula_1_datasets/outputs" "$env:USERPROFILE\Downloads\opaIOT_Aula_1_datasets_outputs"
+scp -r "${VM_USER}@${VM_HOST}:~/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_1_datasets/outputs" "$env:USERPROFILE\Downloads\opaIOT_Aula_1_datasets_outputs"
 ```
 
 Se a VM usa chave SSH:
 
 ```powershell
-scp -i "$env:USERPROFILE\.ssh\id_ed25519" -r "${VM_USER}@${VM_HOST}:~/opaIOT_2026/Modulo_3/Aula_1_datasets/outputs" "$env:USERPROFILE\Downloads\opaIOT_Aula_1_datasets_outputs"
+scp -i "$env:USERPROFILE\.ssh\id_ed25519" -r "${VM_USER}@${VM_HOST}:~/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_1_datasets/outputs" "$env:USERPROFILE\Downloads\opaIOT_Aula_1_datasets_outputs"
 ```
 
 Confira no Windows:
@@ -400,7 +400,7 @@ Se a porta `8000` estiver ocupada, edite a constante `PORT` no topo de `scripts/
 Se o `scp` retornar `No such file or directory`, confira na VM se a pasta existe:
 
 ```bash
-ls -lah ~/opaIOT_2026/Modulo_3/Aula_1_datasets/outputs
+ls -lah ~/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_1_datasets/outputs
 ```
 
 Execute os scripts como arquivos:

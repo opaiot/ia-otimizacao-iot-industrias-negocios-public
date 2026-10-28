@@ -108,7 +108,7 @@ Use estes materiais nesta ordem:
 Entre no diretório da aula:
 
 ```bash
-cd Modulo_3/Aula_3_kafka
+cd M3/Aula_3_kafka
 ```
 
 Crie e ative o ambiente Python:
@@ -204,7 +204,7 @@ Para configurar o Prometheus seguindo o mesmo procedimento da Aula 1, execute:
 bash scripts/configure_prometheus.sh
 ```
 
-Execute esse comando na VM Ubuntu onde o Prometheus está instalado, a partir do diretório `Modulo_3/Aula_3_kafka`.
+Execute esse comando na VM Ubuntu onde o Prometheus está instalado, a partir do diretório `M3/Aula_3_kafka`.
 
 O script faz backup do `prometheus.yml`, adiciona o job da prática, valida com `promtool check config` e reinicia o Prometheus usando `pkill`, como na Aula 1. O job configurado é:
 

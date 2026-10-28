@@ -33,7 +33,7 @@ Use esta opção somente em uma máquina onde Docker esteja disponível.
 Entre no diretório da aula:
 
 ```bash
-cd Modulo_3/Aula_2_series_temporais
+cd M3/Aula_2_series_temporais
 ```
 
 Suba o Grafana:
