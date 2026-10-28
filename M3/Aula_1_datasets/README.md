@@ -2,12 +2,18 @@
 
 Esta aula usa um dataset de qualidade do ar em ambientes internos para praticar inspeção de dados, normalização de eventos IoT e exposição de métricas Prometheus.
 
+| Ambiente | Quando usar | Entrada |
+| --- | --- | --- |
+| VM do curso | Caminho principal da prática. Na VM, o Prometheus roda instalado diretamente no Ubuntu, sem Docker. | Seções 1 a 7 deste README |
+| Docker local (opcional) | Somente para quem quiser executar a prática na própria máquina, fora da VM disponibilizada. Não faz parte do roteiro da aula. | [Opcional: execução local com Docker](#opcional-execução-local-com-docker) |
+
 ## Estrutura
 
 - `data/`: contém o CSV usado na aula e a referência da fonte do dataset.
 - `scripts/`: contém os scripts Python e o `requirements.txt`.
 - `outputs/`: recebe os arquivos gerados localmente pelo script de inspeção.
 - `outputs_example/`: contém uma execução de exemplo versionada para consulta.
+- `docker/`: opcional, não usado na VM. Sobe exportador, Prometheus e Grafana em containers para quem quiser executar localmente. Veja [docker/README.md](docker/README.md).
 
 Scripts principais:
 
@@ -210,9 +216,9 @@ curl http://localhost:8000/metrics | head
 
 Para encerrar, pressione `Ctrl+C`.
 
-### Prometheus instalado diretamente na VM
+### Configurar o Prometheus da VM
 
-Se o Prometheus estiver instalado diretamente no Ubuntu, sem Docker, configure o target como `localhost:8000`.
+Na VM do curso, o Prometheus está instalado diretamente no Ubuntu, sem Docker. Por isso ele acessa o exportador Python pelo target `localhost:8000`.
 
 Edite o arquivo:
 
@@ -263,81 +269,7 @@ Para iniciar o processo em segundo plano faça:
 nohup prometheus --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/var/lib/prometheus --web.listen-address=0.0.0.0:9090 > prometheus.log 2>&1 &
 ```
 
-### Prometheus rodando em container Docker
-
-Se o Prometheus estiver rodando em um container Docker, cuidado com `localhost`: dentro do container, `localhost` aponta para o próprio container, não para a VM Ubuntu.
-
-Nesse caso, o script Python continua rodando na VM em:
-
-```text
-http://localhost:8000/metrics
-```
-
-Mas o `prometheus.yml` do container deve apontar para o host Docker. No Linux, uma forma prática é usar `host.docker.internal` com o mapeamento `host-gateway`.
-
-Exemplo de `prometheus.yml`:
-
-```yaml
-scrape_configs:
-  - job_name: "opaiot_iaq"
-    scrape_interval: 5s
-    static_configs:
-      - targets: ["host.docker.internal:8000"]
-```
-
-Se o container foi iniciado com `docker run`, inclua:
-
-```bash
---add-host=host.docker.internal:host-gateway
-```
-
-Exemplo:
-
-```bash
-docker run -d \
-  --name prometheus \
-  -p 9090:9090 \
-  --add-host=host.docker.internal:host-gateway \
-  -v "$PWD/prometheus.yml:/etc/prometheus/prometheus.yml" \
-  prom/prometheus
-```
-
-Se estiver usando `docker compose`, inclua no serviço do Prometheus:
-
-```yaml
-extra_hosts:
-  - "host.docker.internal:host-gateway"
-```
-
-Depois reinicie o container:
-
-```bash
-docker compose restart prometheus
-```
-
-Para testar se o container alcança o exportador Python:
-
-```bash
-docker exec prometheus wget -qO- http://host.docker.internal:8000/metrics | head
-```
-
-Se o nome do container não for `prometheus`, descubra com:
-
-```bash
-docker ps
-```
-
-Alternativa: usar o IP da bridge Docker da VM no `prometheus.yml`:
-
-```bash
-ip -4 addr show docker0
-```
-
-Normalmente será algo como `172.17.0.1`; nesse caso, o target ficaria:
-
-```yaml
-targets: ["172.17.0.1:8000"]
-```
+### Acessar as métricas pelo navegador do Windows
 
 Se quiser acessar as métricas pelo navegador do Windows, uma opção segura é abrir um túnel SSH em outro PowerShell:
 
@@ -411,3 +343,94 @@ python 2-prometheus.py
 ```
 
 Não use `python -m` com esses nomes, pois `1-inspect.py` e `2-prometheus.py` são nomes de arquivo, não nomes de módulo Python.
+
+## Opcional: execução local com Docker
+
+> **Esta seção não faz parte da prática.** O roteiro da aula é executado na VM disponibilizada, seguindo as seções 1 a 7, e a VM não usa Docker. Use as instruções abaixo somente se quiser reproduzir a prática na sua própria máquina, com Docker instalado.
+
+### Stack completa em containers
+
+A forma mais simples de executar localmente é a pasta [`docker/`](docker/README.md), que sobe o exportador Python, o Prometheus e o Grafana em containers, já configurados:
+
+```bash
+cd M3/Aula_1_datasets/docker
+docker compose up --build
+```
+
+Endpoints, dashboard provisionado e geração dos outputs estão descritos em [docker/README.md](docker/README.md).
+
+### Script Python no host e Prometheus em container
+
+Se preferir executar o `2-prometheus.py` diretamente na sua máquina e apenas o Prometheus em um container, cuidado com `localhost`: dentro do container, `localhost` aponta para o próprio container, não para a sua máquina.
+
+Nesse caso, o script Python continua expondo as métricas na sua máquina em:
+
+```text
+http://localhost:8000/metrics
+```
+
+Mas o `prometheus.yml` do container deve apontar para o host Docker. No Linux, uma forma prática é usar `host.docker.internal` com o mapeamento `host-gateway`.
+
+Exemplo de `prometheus.yml`:
+
+```yaml
+scrape_configs:
+  - job_name: "opaiot_iaq"
+    scrape_interval: 5s
+    static_configs:
+      - targets: ["host.docker.internal:8000"]
+```
+
+Se o container foi iniciado com `docker run`, inclua:
+
+```bash
+--add-host=host.docker.internal:host-gateway
+```
+
+Exemplo:
+
+```bash
+docker run -d \
+  --name prometheus \
+  -p 9090:9090 \
+  --add-host=host.docker.internal:host-gateway \
+  -v "$PWD/prometheus.yml:/etc/prometheus/prometheus.yml" \
+  prom/prometheus
+```
+
+Se estiver usando `docker compose`, inclua no serviço do Prometheus:
+
+```yaml
+extra_hosts:
+  - "host.docker.internal:host-gateway"
+```
+
+Depois reinicie o container:
+
+```bash
+docker compose restart prometheus
+```
+
+Para testar se o container alcança o exportador Python:
+
+```bash
+docker exec prometheus wget -qO- http://host.docker.internal:8000/metrics | head
+```
+
+Se o nome do container não for `prometheus`, descubra com:
+
+```bash
+docker ps
+```
+
+Alternativa no Linux: usar o IP da bridge Docker do host no `prometheus.yml`:
+
+```bash
+ip -4 addr show docker0
+```
+
+Normalmente será algo como `172.17.0.1`; nesse caso, o target ficaria:
+
+```yaml
+targets: ["172.17.0.1:8000"]
+```
