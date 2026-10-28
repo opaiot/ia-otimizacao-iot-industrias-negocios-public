@@ -48,6 +48,7 @@ Três camadas de segurança, independentes entre si:
 compose.yaml                  # broker + subscriber + device-simulator + attacker + dashboard
 setup.sh                      # gera certificados, credenciais e chave HMAC
 slides_monitoria.pdf          # slides de apoio da monitoria
+hmac.gif                      # demonstração do painel e dos ataques simulados
 .env                           # UID/GID, SIM_DEVICE_COUNT, DASHBOARD_PORT (gerado, não versionado)
 mosquitto/
   config/mosquitto.conf       # listener TLS, auth, ACL
@@ -237,6 +238,13 @@ subscriber) e **vermelho/roxo/laranja** para os ataques injetados pelo atacante
 (atacante → broker), que terminam em um flash vermelho de rejeição no
 subscriber. Ligue o atacante e troque para esta aba para ver os ataques sendo
 barrados em tempo real.
+
+O GIF abaixo mostra as abas **Monitor** e **Topologia**, com o atacante sendo
+ligado e desligado. Observe a telemetria válida, a rejeição de mensagens
+adulteradas e forjadas pela validação de HMAC e o bloqueio de replay pelo
+controle de sequência.
+
+![Painel MQTT nas abas Monitor e Topologia, com telemetria válida e ataques simulados](hmac.gif)
 
 Como funciona por baixo: o backend assina MQTT (`sensors/#`), refaz a mesma
 validação HMAC + sequência do `subscriber` e transmite cada veredito ao
