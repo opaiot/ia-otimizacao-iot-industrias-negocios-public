@@ -9,7 +9,7 @@ Abra um ambiente como KillerCoda, Minikube ou K3s e envie esta pasta da prática
 Entre no diretório da aula:
 
 ```bash
-cd Modulo_3/Aula_5_orquestração
+cd M3/Aula_5_orquestração
 ```
 
 ## 2. Verificar nodes

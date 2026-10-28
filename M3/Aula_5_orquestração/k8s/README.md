@@ -52,7 +52,7 @@ kubectl version --client
 ### 3. Entrar no diretório da aula
 
 ```powershell
-cd ./opaIOT_2026/Modulo_3/Aula_5_orquestração
+cd ./ia-otimizacao-iot-industrias-negocios-public/M3/Aula_5_orquestração
 ```
 
 Se o repositório estiver em outro local, ajuste o caminho antes de continuar.

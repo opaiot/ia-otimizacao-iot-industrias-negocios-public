@@ -18,7 +18,7 @@ Para alterar caminhos, porta ou intervalo de atualização, edite essas constant
 No terminal do Linux, entre na raiz do repositório. Ajuste o caminho conforme o local onde você clonou o projeto:
 
 ```bash
-cd ~/opaIOT_2026
+cd ~/ia-otimizacao-iot-industrias-negocios-public
 ```
 
 Se necessário, instale Python, `pip` e suporte a ambientes virtuais:
@@ -31,7 +31,7 @@ sudo apt install -y python3 python3-pip python3-venv
 Crie e ative um ambiente virtual para esta aula:
 
 ```bash
-cd Modulo_3/Aula_1_datasets/scripts
+cd M3/Aula_1_datasets/scripts
 python3 -m venv .venv
 source .venv/bin/activate
 ```

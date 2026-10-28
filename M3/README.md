@@ -27,7 +27,7 @@ As atividades foram pensadas para execução na VM Linux conteinerizada disponib
 ## Estrutura
 
 ```text
-Modulo_3/
+M3/
 ├── Aula_1_datasets/
 │   ├── data/
 │   ├── docker/

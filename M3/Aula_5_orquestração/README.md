@@ -52,7 +52,7 @@ No Docker Compose, use `kafka:9092` entre containers. Use `localhost:29092` para
 Entre no diretório da aula:
 
 ```bash
-cd Modulo_3/Aula_5_orquestração
+cd M3/Aula_5_orquestração
 ```
 
 Suba a stack:

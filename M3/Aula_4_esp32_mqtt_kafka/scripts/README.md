@@ -42,7 +42,7 @@ Exemplo alternativo compatível com o ESP32 da [Aula 8](../../../M2/Aula_8_pipel
 ## Instalação
 
 ```bash
-cd Modulo_3/Aula_4_esp32_mqtt_kafka/scripts
+cd M3/Aula_4_esp32_mqtt_kafka/scripts
 python -m venv .venv
 
 # Linux/macOS
@@ -64,7 +64,7 @@ pip install -r requirements.txt
 Linux/macOS:
 
 ```bash
-cd Modulo_3/Aula_4_esp32_mqtt_kafka
+cd M3/Aula_4_esp32_mqtt_kafka
 cp .env.example .env
 cd scripts
 source .venv/bin/activate
@@ -75,7 +75,7 @@ python mqtt_kafka_producer.py
 Windows PowerShell:
 
 ```powershell
-cd Modulo_3\Aula_4_esp32_mqtt_kafka
+cd M3\Aula_4_esp32_mqtt_kafka
 Copy-Item .env.example .env -ErrorAction SilentlyContinue
 cd scripts
 .venv\Scripts\Activate.ps1
@@ -96,7 +96,7 @@ Com a stack da aula (`docker compose up --build -d` na raiz de `Aula_4_esp32_mqt
 Para rodar manualmente no host, carregue o `.env` da raiz da aula:
 
 ```bash
-cd Modulo_3/Aula_4_esp32_mqtt_kafka
+cd M3/Aula_4_esp32_mqtt_kafka
 cp .env.example .env   # se ainda nao existir
 
 cd scripts
@@ -107,7 +107,7 @@ python mqtt_kafka_producer.py
 No PowerShell:
 
 ```powershell
-cd Modulo_3\Aula_4_esp32_mqtt_kafka
+cd M3\Aula_4_esp32_mqtt_kafka
 Copy-Item .env.example .env
 
 cd scripts
@@ -142,7 +142,7 @@ Definidas em [../.env.example](../.env.example):
 Consuma mensagens do tópico:
 
 ```bash
-docker compose -f Modulo_3/Aula_3_kafka/docker/docker-compose.yml exec kafka \
+docker compose -f M3/Aula_3_kafka/docker/docker-compose.yml exec kafka \
   /opt/kafka/bin/kafka-console-consumer.sh \
   --bootstrap-server kafka:9092 \
   --topic iot.air_quality \

@@ -45,6 +45,6 @@ Referências legais do Kaggle:
 
 Este arquivo faz parte de um material didático público no contexto deste repositório. Para referenciar este material, utilize:
 
-> `opaIOT_2026`. Módulo 3, Aula 1 - datasets: `IoT_Indoor_Air_Quality_Dataset.csv`. Material didático público. Dataset original: "IoT Indoor Air Quality", de KhajaAhmed1, disponibilizado no Kaggle sob a licença CC BY-NC-SA 4.0. Disponível em: https://www.kaggle.com/datasets/khajaahmed1/iot-indoor-air-quality. Acesso em: 31 maio 2026.
+> `ia-otimizacao-iot-industrias-negocios-public`. Módulo 3, Aula 1 - datasets: `IoT_Indoor_Air_Quality_Dataset.csv`. Material didático público. Dataset original: "IoT Indoor Air Quality", de KhajaAhmed1, disponibilizado no Kaggle sob a licença CC BY-NC-SA 4.0. Disponível em: https://www.kaggle.com/datasets/khajaahmed1/iot-indoor-air-quality. Acesso em: 31 maio 2026.
 
 Esta nota é apenas um resumo de referência para o repositório e não substitui os textos legais oficiais do Kaggle ou da licença Creative Commons.

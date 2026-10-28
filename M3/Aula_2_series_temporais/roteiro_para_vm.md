@@ -30,15 +30,15 @@ ssh -i "$env:USERPROFILE\.ssh\id_ed25519" "${VM_USER}@${VM_HOST}"
 Na VM:
 
 ```bash
-cd ~/opaIOT_2026/Modulo_3/Aula_2_series_temporais
+cd ~/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_2_series_temporais
 ```
 
 Se o repositório ainda não estiver na VM:
 
 ```bash
 cd ~
-git clone https://github.com/Smart-LaSDPC/opaIOT_2026.git
-cd ~/opaIOT_2026/Modulo_3/Aula_2_series_temporais
+git clone https://github.com/opaiot/ia-otimizacao-iot-industrias-negocios-public.git
+cd ~/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_2_series_temporais
 ```
 
 ## 3. Verificar o Prometheus

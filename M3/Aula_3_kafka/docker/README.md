@@ -27,7 +27,7 @@ producer ──> kafka (KRaft) ──> consumer (/metrics:8000) ──> promethe
 
 ## Como subir
 
-A partir desta pasta (`Modulo_3/Aula_3_kafka/docker`):
+A partir desta pasta (`M3/Aula_3_kafka/docker`):
 
 ```bash
 docker compose up --build

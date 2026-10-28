@@ -42,7 +42,7 @@ Se ainda não instalou o Kafka, siga antes o roteiro:
 A partir do diretório da aula:
 
 ```bash
-cd Modulo_3/Aula_3_kafka
+cd M3/Aula_3_kafka
 ```
 
 Crie e ative um ambiente virtual:
@@ -275,7 +275,7 @@ Para configurar automaticamente o target padrão `localhost:8000`, execute:
 bash scripts/configure_prometheus.sh
 ```
 
-Execute esse comando na VM Ubuntu onde o Prometheus está instalado, a partir do diretório `Modulo_3/Aula_3_kafka`.
+Execute esse comando na VM Ubuntu onde o Prometheus está instalado, a partir do diretório `M3/Aula_3_kafka`.
 
 O script faz backup do arquivo atual antes de alterar:
 

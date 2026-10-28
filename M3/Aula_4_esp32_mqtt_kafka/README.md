@@ -13,14 +13,14 @@ Esta aula conecta telemetria MQTT ao tópico Kafka `iot.air_quality` da [Aula 3]
 1. Suba o Kafka da Aula 3:
 
 ```bash
-cd Modulo_3/Aula_3_kafka/docker
+cd M3/Aula_3_kafka/docker
 docker compose up -d
 ```
 
 2. Na pasta desta aula copie o exemplo de variáveis e suba a stack:
 
 ```bash
-cd Modulo_3/Aula_4_esp32_mqtt_kafka
+cd M3/Aula_4_esp32_mqtt_kafka
 cp .env.example .env
 docker compose up --build -d
 ```
@@ -59,7 +59,7 @@ ESP32 + DHT22 + MQ-7 (firmware/)
 Copie o exemplo e ajuste se necessário:
 
 ```bash
-cd Modulo_3/Aula_4_esp32_mqtt_kafka
+cd M3/Aula_4_esp32_mqtt_kafka
 cp .env.example .env
 ```
 
@@ -78,14 +78,14 @@ cp .env.example .env
 Primeiro suba o Kafka da Aula 3:
 
 ```bash
-cd Modulo_3/Aula_3_kafka/docker
+cd M3/Aula_3_kafka/docker
 docker compose up -d
 ```
 
 Depois suba Mosquitto e o bridge desta aula:
 
 ```bash
-cd Modulo_3/Aula_4_esp32_mqtt_kafka
+cd M3/Aula_4_esp32_mqtt_kafka
 cp .env.example .env
 docker compose up --build -d
 ```

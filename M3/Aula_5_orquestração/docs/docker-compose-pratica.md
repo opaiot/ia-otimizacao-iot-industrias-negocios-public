@@ -9,7 +9,7 @@ sensor-simulator -> Mosquitto -> mqtt-to-kafka -> Kafka -> iot-processor -> Prom
 ## 1. Entrar no diretório
 
 ```bash
-cd Modulo_3/Aula_5_orquestração
+cd M3/Aula_5_orquestração
 ```
 
 Observe que o arquivo principal da prática é `docker-compose.yaml`.

@@ -2,12 +2,18 @@
 
 Esta aula usa um dataset de qualidade do ar em ambientes internos para praticar inspeção de dados, normalização de eventos IoT e exposição de métricas Prometheus.
 
+| Ambiente | Quando usar | Entrada |
+| --- | --- | --- |
+| VM do curso | Caminho principal da prática. Na VM, o Prometheus roda instalado diretamente no Ubuntu, sem Docker. | Seções 1 a 7 deste README |
+| Docker local (opcional) | Somente para quem quiser executar a prática na própria máquina, fora da VM disponibilizada. Não faz parte do roteiro da aula. | [Opcional: execução local com Docker](#opcional-execução-local-com-docker) |
+
 ## Estrutura
 
 - `data/`: contém o CSV usado na aula e a referência da fonte do dataset.
 - `scripts/`: contém os scripts Python e o `requirements.txt`.
 - `outputs/`: recebe os arquivos gerados localmente pelo script de inspeção.
 - `outputs_example/`: contém uma execução de exemplo versionada para consulta.
+- `docker/`: opcional, não usado na VM. Sobe exportador, Prometheus e Grafana em containers para quem quiser executar localmente. Veja [docker/README.md](docker/README.md).
 
 Scripts principais:
 
@@ -125,8 +131,8 @@ Clone o repositório:
 
 ```bash
 cd ~
-git clone https://github.com/Smart-LaSDPC/opaIOT_2026.git
-cd opaIOT_2026/Modulo_3/Aula_1_datasets
+git clone https://github.com/opaiot/ia-otimizacao-iot-industrias-negocios-public.git
+cd ia-otimizacao-iot-industrias-negocios-public/M3/Aula_1_datasets
 ```
 
 ## 3. Preparar o ambiente Python
@@ -134,7 +140,7 @@ cd opaIOT_2026/Modulo_3/Aula_1_datasets
 Entre na pasta de scripts:
 
 ```bash
-cd ~/opaIOT_2026/Modulo_3/Aula_1_datasets/scripts
+cd ~/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_1_datasets/scripts
 ```
 
 Crie e ative um ambiente virtual:
@@ -162,7 +168,7 @@ python 1-inspect.py
 Os arquivos serão gerados em:
 
 ```text
-~/opaIOT_2026/Modulo_3/Aula_1_datasets/outputs/
+~/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_1_datasets/outputs/
 ```
 
 Se você ainda não executou o script, consulte `outputs_example/` para ver uma amostra dos arquivos esperados.
@@ -210,9 +216,9 @@ curl http://localhost:8000/metrics | head
 
 Para encerrar, pressione `Ctrl+C`.
 
-### Prometheus instalado diretamente na VM
+### Configurar o Prometheus da VM
 
-Se o Prometheus estiver instalado diretamente no Ubuntu, sem Docker, configure o target como `localhost:8000`.
+Na VM do curso, o Prometheus está instalado diretamente no Ubuntu, sem Docker. Por isso ele acessa o exportador Python pelo target `localhost:8000`.
 
 Edite o arquivo:
 
@@ -263,11 +269,101 @@ Para iniciar o processo em segundo plano faça:
 nohup prometheus --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/var/lib/prometheus --web.listen-address=0.0.0.0:9090 > prometheus.log 2>&1 &
 ```
 
-### Prometheus rodando em container Docker
+### Acessar as métricas pelo navegador do Windows
 
-Se o Prometheus estiver rodando em um container Docker, cuidado com `localhost`: dentro do container, `localhost` aponta para o próprio container, não para a VM Ubuntu.
+Se quiser acessar as métricas pelo navegador do Windows, uma opção segura é abrir um túnel SSH em outro PowerShell:
 
-Nesse caso, o script Python continua rodando na VM em:
+```powershell
+ssh -L 8000:localhost:8000 "${VM_USER}@${VM_HOST}"
+```
+
+Depois abra no Windows:
+
+```text
+http://localhost:8000/metrics
+```
+
+## 6. Copiar os outputs da VM para o Windows com scp
+
+Depois de executar `1-inspect.py` na VM, saia da sessão SSH ou abra outro PowerShell no Windows.
+
+Defina novamente as variáveis, se necessário:
+
+```powershell
+$VM_USER = "ubuntu"
+$VM_HOST = "192.168.0.10"
+```
+
+Crie uma pasta local para receber os arquivos:
+
+```powershell
+mkdir "$env:USERPROFILE\Downloads\opaIOT_Aula_1_datasets_outputs"
+```
+
+Copie a pasta `outputs` da VM para o Windows:
+
+```powershell
+scp -r "${VM_USER}@${VM_HOST}:~/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_1_datasets/outputs" "$env:USERPROFILE\Downloads\opaIOT_Aula_1_datasets_outputs"
+```
+
+Se a VM usa chave SSH:
+
+```powershell
+scp -i "$env:USERPROFILE\.ssh\id_ed25519" -r "${VM_USER}@${VM_HOST}:~/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_1_datasets/outputs" "$env:USERPROFILE\Downloads\opaIOT_Aula_1_datasets_outputs"
+```
+
+Confira no Windows:
+
+```powershell
+Get-ChildItem "$env:USERPROFILE\Downloads\opaIOT_Aula_1_datasets_outputs" -Recurse
+```
+
+## 7. Problemas comuns
+
+Se aparecer `ModuleNotFoundError`, ative o ambiente virtual e reinstale as dependências:
+
+```bash
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
+Se a porta `8000` estiver ocupada, edite a constante `PORT` no topo de `scripts/2-prometheus.py`.
+
+Se o `scp` retornar `No such file or directory`, confira na VM se a pasta existe:
+
+```bash
+ls -lah ~/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_1_datasets/outputs
+```
+
+Execute os scripts como arquivos:
+
+```bash
+python 1-inspect.py
+python 2-prometheus.py
+```
+
+Não use `python -m` com esses nomes, pois `1-inspect.py` e `2-prometheus.py` são nomes de arquivo, não nomes de módulo Python.
+
+## Opcional: execução local com Docker
+
+> **Esta seção não faz parte da prática.** O roteiro da aula é executado na VM disponibilizada, seguindo as seções 1 a 7, e a VM não usa Docker. Use as instruções abaixo somente se quiser reproduzir a prática na sua própria máquina, com Docker instalado.
+
+### Stack completa em containers
+
+A forma mais simples de executar localmente é a pasta [`docker/`](docker/README.md), que sobe o exportador Python, o Prometheus e o Grafana em containers, já configurados:
+
+```bash
+cd M3/Aula_1_datasets/docker
+docker compose up --build
+```
+
+Endpoints, dashboard provisionado e geração dos outputs estão descritos em [docker/README.md](docker/README.md).
+
+### Script Python no host e Prometheus em container
+
+Se preferir executar o `2-prometheus.py` diretamente na sua máquina e apenas o Prometheus em um container, cuidado com `localhost`: dentro do container, `localhost` aponta para o próprio container, não para a sua máquina.
+
+Nesse caso, o script Python continua expondo as métricas na sua máquina em:
 
 ```text
 http://localhost:8000/metrics
@@ -327,7 +423,7 @@ Se o nome do container não for `prometheus`, descubra com:
 docker ps
 ```
 
-Alternativa: usar o IP da bridge Docker da VM no `prometheus.yml`:
+Alternativa no Linux: usar o IP da bridge Docker do host no `prometheus.yml`:
 
 ```bash
 ip -4 addr show docker0
@@ -338,76 +434,3 @@ Normalmente será algo como `172.17.0.1`; nesse caso, o target ficaria:
 ```yaml
 targets: ["172.17.0.1:8000"]
 ```
-
-Se quiser acessar as métricas pelo navegador do Windows, uma opção segura é abrir um túnel SSH em outro PowerShell:
-
-```powershell
-ssh -L 8000:localhost:8000 "${VM_USER}@${VM_HOST}"
-```
-
-Depois abra no Windows:
-
-```text
-http://localhost:8000/metrics
-```
-
-## 6. Copiar os outputs da VM para o Windows com scp
-
-Depois de executar `1-inspect.py` na VM, saia da sessão SSH ou abra outro PowerShell no Windows.
-
-Defina novamente as variáveis, se necessário:
-
-```powershell
-$VM_USER = "ubuntu"
-$VM_HOST = "192.168.0.10"
-```
-
-Crie uma pasta local para receber os arquivos:
-
-```powershell
-mkdir "$env:USERPROFILE\Downloads\opaIOT_Aula_1_datasets_outputs"
-```
-
-Copie a pasta `outputs` da VM para o Windows:
-
-```powershell
-scp -r "${VM_USER}@${VM_HOST}:~/opaIOT_2026/Modulo_3/Aula_1_datasets/outputs" "$env:USERPROFILE\Downloads\opaIOT_Aula_1_datasets_outputs"
-```
-
-Se a VM usa chave SSH:
-
-```powershell
-scp -i "$env:USERPROFILE\.ssh\id_ed25519" -r "${VM_USER}@${VM_HOST}:~/opaIOT_2026/Modulo_3/Aula_1_datasets/outputs" "$env:USERPROFILE\Downloads\opaIOT_Aula_1_datasets_outputs"
-```
-
-Confira no Windows:
-
-```powershell
-Get-ChildItem "$env:USERPROFILE\Downloads\opaIOT_Aula_1_datasets_outputs" -Recurse
-```
-
-## 7. Problemas comuns
-
-Se aparecer `ModuleNotFoundError`, ative o ambiente virtual e reinstale as dependências:
-
-```bash
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-```
-
-Se a porta `8000` estiver ocupada, edite a constante `PORT` no topo de `scripts/2-prometheus.py`.
-
-Se o `scp` retornar `No such file or directory`, confira na VM se a pasta existe:
-
-```bash
-ls -lah ~/opaIOT_2026/Modulo_3/Aula_1_datasets/outputs
-```
-
-Execute os scripts como arquivos:
-
-```bash
-python 1-inspect.py
-python 2-prometheus.py
-```
-
-Não use `python -m` com esses nomes, pois `1-inspect.py` e `2-prometheus.py` são nomes de arquivo, não nomes de módulo Python.
