@@ -1,0 +1,114 @@
+{
+  "title": "IoT — Observabilidade e Resiliência",
+  "uid": "iot-obs-resilience",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": { "from": "now-5m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Conexão MQTT",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "desconectado", "color": "red" }, "1": { "text": "conectado", "color": "green" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "value_and_name", "colorMode": "background" },
+      "targets": [
+        { "refId": "A", "expr": "iot_mqtt_connected{job=\"publisher\"}", "legendFormat": "publisher" },
+        { "refId": "B", "expr": "iot_mqtt_connected{job=\"consumer\"}", "legendFormat": "consumer" }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Mensagens descartadas (total)",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] } },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "value", "colorMode": "value" },
+      "targets": [ { "refId": "A", "expr": "iot_dropped_total" } ]
+    },
+    {
+      "id": 3,
+      "title": "Latência ponta a ponta — p95",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 2 }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "value" },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum(rate(iot_end_to_end_latency_seconds_bucket[30s])) by (le))" }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Fila atual (tarefas)",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "value" },
+      "targets": [ { "refId": "A", "expr": "iot_queue_depth" } ]
+    },
+    {
+      "id": 5,
+      "title": "Taxa de entrada, recebimento e processamento (msg/s)",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 5 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "refId": "A", "expr": "rate(iot_generated_total[10s])", "legendFormat": "geradas (publisher)" },
+        { "refId": "B", "expr": "rate(iot_received_total[10s])", "legendFormat": "recebidas (consumer)" },
+        { "refId": "C", "expr": "rate(iot_processed_total[10s])", "legendFormat": "processadas (worker)" }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Tamanho da fila interna",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 5 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 15 } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [ { "refId": "A", "expr": "iot_queue_depth", "legendFormat": "iot_queue_depth" } ]
+    },
+    {
+      "id": 7,
+      "title": "Descartes por segundo",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "bars", "fillOpacity": 60 } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [ { "refId": "A", "expr": "rate(iot_dropped_total[10s])", "legendFormat": "iot_dropped_total" } ]
+    },
+    {
+      "id": 8,
+      "title": "Latência ponta a ponta (p50 / p95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.50, sum(rate(iot_end_to_end_latency_seconds_bucket[30s])) by (le))", "legendFormat": "p50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum(rate(iot_end_to_end_latency_seconds_bucket[30s])) by (le))", "legendFormat": "p95" }
+      ]
+    }
+  ]
+}

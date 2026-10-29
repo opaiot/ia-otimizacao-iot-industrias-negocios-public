@@ -24,6 +24,15 @@ As atividades foram pensadas para execução na VM Linux conteinerizada disponib
 | Aula 5 - Orquestração | [Aula_5_orquestração/README.md](Aula_5_orquestração/README.md) | Stack IoT local com Docker Compose, observabilidade e manifests Kubernetes didáticos. |
 | Aula 6 - Segurança e Governança | [Aula_6_seguranca_governanca/README.md](Aula_6_seguranca_governanca/README.md) | Autenticação MQTT, ACL por tópico e Grafana como camada de governança. |
 
+## Extras
+
+Materiais complementares, fora da sequência numerada de aulas.
+
+| Extra | Entrada principal | Conteúdo |
+| --- | --- | --- |
+| Filas, Escalonamento e Escalabilidade | [Extras/pratica_filas_escalonamento_usl.ipynb](Extras/pratica_filas_escalonamento_usl.ipynb) | Notebook de prática de uma monitoria do curso: divisão estática x fila dinâmica, diagramas de Gantt, métricas de desempenho e a Universal Scalability Law, mais um benchmark (`benchmark_filas_cpu.py`) com processos reais. |
+| Hands-On Observabilidade e Resiliência em IoT | [Extras/Hands_On_Observability_Resilience_IoT/README.md](Extras/Hands_On_Observability_Resilience_IoT/README.md) | Laboratório em Docker Compose: publisher e consumer MQTT com fila interna limitada, Prometheus e Grafana (dashboard provisionado). Dois experimentos guiados: indisponibilidade do broker e sobrecarga do consumidor (backpressure). Inclui slides de apoio de uma monitoria do curso. |
+
 ## Estrutura
 
 ```text

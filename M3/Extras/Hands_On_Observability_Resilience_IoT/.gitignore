@@ -1,0 +1,6 @@
+mosquitto/data/*
+!mosquitto/data/.gitkeep
+mosquitto/log/*
+!mosquitto/log/.gitkeep
+__pycache__/
+*.pyc

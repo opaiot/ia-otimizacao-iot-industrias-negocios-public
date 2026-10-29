@@ -1,0 +1,85 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2.0.18
+    container_name: iot-mosquitto
+    restart: unless-stopped
+    # Roda com o UID/GID do host (passados pelo Makefile) para que os
+    # arquivos gerados em mosquitto/data e mosquitto/log não fiquem com
+    # dono diferente do seu usuário.
+    user: "${UID:-1883}:${GID:-1883}"
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -t '$$SYS/#' -C 1 -W 3 -i healthcheck || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - iotnet
+
+  publisher:
+    build: ./publisher
+    container_name: iot-publisher
+    restart: unless-stopped
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    environment:
+      - MQTT_HOST=mosquitto
+      - DEVICE_ID=esp32-sim-01
+      # Taxa normal do publisher principal; o Experimento 2 injeta uma
+      # rajada à parte com `make burst`, sem derrubar este serviço.
+      - RATE=${PUBLISH_RATE:-2}
+    networks:
+      - iotnet
+
+  consumer:
+    build: ./consumer
+    container_name: iot-consumer
+    restart: unless-stopped
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    environment:
+      - MQTT_HOST=mosquitto
+      - QUEUE_SIZE=${QUEUE_SIZE:-100}
+      - PROCESS_RATE=${PROCESS_RATE:-10}
+    networks:
+      - iotnet
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: iot-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    networks:
+      - iotnet
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: iot-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - iotnet
+
+networks:
+  iotnet:
+    driver: bridge
