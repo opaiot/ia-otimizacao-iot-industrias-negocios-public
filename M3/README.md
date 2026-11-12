@@ -4,6 +4,8 @@ Este módulo reúne as práticas do OpAIoT 2026 voltadas ao tratamento de dados 
 
 As atividades foram pensadas para execução na VM Linux conteinerizada disponibilizada na nuvem privada LASDPC. Quando houver suporte local, a própria aula traz arquivos Docker ou Docker Compose para reproduzir o ambiente fora da VM.
 
+> **Sobre a VM do curso:** ela é um container Docker com Ubuntu, não uma máquina virtual completa. Não há `systemd` nem Docker dentro dela, o acesso SSH é só interativo (sem `scp` nem túnel de portas; Prometheus e Grafana têm endereços próprios no navegador) e o container tem limites de memória e de processos. Leia o [guia do ambiente da VM](ambiente_vm.md) antes de começar as Aulas 1, 2 e 3.
+
 ## Ordem sugerida
 
 1. Comece pela [Aula 1 - Datasets](Aula_1_datasets/README.md) para inspecionar um CSV de sensores, normalizar eventos IoT e expor métricas Prometheus.
@@ -30,13 +32,14 @@ Materiais complementares, fora da sequência numerada de aulas.
 
 | Extra | Entrada principal | Conteúdo |
 | --- | --- | --- |
-| Filas, Escalonamento e Escalabilidade | [Extras/pratica_filas_escalonamento_usl.ipynb](Extras/pratica_filas_escalonamento_usl.ipynb) | Notebook de prática de uma monitoria do curso: divisão estática x fila dinâmica, diagramas de Gantt, métricas de desempenho e a Universal Scalability Law, mais um benchmark (`benchmark_filas_cpu.py`) com processos reais. |
+| Filas, Escalonamento e Escalabilidade | [Extras/Escalonamento_e_filas/pratica_filas_escalonamento_usl.ipynb](Extras/Escalonamento_e_filas/pratica_filas_escalonamento_usl.ipynb) | Notebook de prática de uma monitoria do curso: divisão estática x fila dinâmica, diagramas de Gantt, métricas de desempenho e a Universal Scalability Law, mais um benchmark (`benchmark_filas_cpu.py`) com processos reais. |
 | Hands-On Observabilidade e Resiliência em IoT | [Extras/Hands_On_Observability_Resilience_IoT/README.md](Extras/Hands_On_Observability_Resilience_IoT/README.md) | Laboratório em Docker Compose: publisher e consumer MQTT com fila interna limitada, Prometheus e Grafana (dashboard provisionado). Dois experimentos guiados: indisponibilidade do broker e sobrecarga do consumidor (backpressure). Inclui slides de apoio de uma monitoria do curso. |
 
 ## Estrutura
 
 ```text
 M3/
+├── ambiente_vm.md
 ├── Aula_1_datasets/
 │   ├── data/
 │   ├── docker/
@@ -71,13 +74,15 @@ M3/
 
 ### VM Linux LASDPC
 
-Use este caminho quando a aula pedir execução na infraestrutura do curso. As práticas documentam os comandos para acessar a VM via SSH, preparar Python, instalar dependências e configurar Prometheus/Grafana.
+Use este caminho quando a aula pedir execução na infraestrutura do curso. O acesso é por SSH interativo (usuário, porta e senha recebidos por e-mail do curso; a porta varia por aluno). Prometheus e Grafana já vêm instalados e em execução e abrem no navegador em `http://andromeda.lasdpc.icmc.usp.br:19XXX` (Prometheus) e `:13XXX` (Grafana), trocando `XXX` pelos três dígitos do seu usuário `opaiotXXX`. As práticas documentam os comandos para preparar Python, instalar dependências e configurar Prometheus/Grafana nesse ambiente.
 
 Entradas úteis:
 
 | Tema | Arquivo |
 | --- | --- |
+| Acesso, limites do container e operação do Prometheus/Grafana | [ambiente_vm.md](ambiente_vm.md) |
 | Aula 1 na VM | [Aula_1_datasets/README.md](Aula_1_datasets/README.md) |
+| Aula 2 na VM | [Aula_2_series_temporais/roteiro_para_vm.md](Aula_2_series_temporais/roteiro_para_vm.md) |
 | Instalação do Kafka | [Aula_3_kafka/instalando_kafka_vm.md](Aula_3_kafka/instalando_kafka_vm.md) |
 | Scripts Kafka | [Aula_3_kafka/scripts/README.md](Aula_3_kafka/scripts/README.md) |
 
