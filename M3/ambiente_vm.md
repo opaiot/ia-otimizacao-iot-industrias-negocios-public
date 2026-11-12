@@ -63,7 +63,7 @@ Outras observações:
 
 ## 4. Prometheus e Grafana já em execução
 
-O ambiente inicia os dois serviços sozinho, como `root`. **Não tente reiniciá-los** com `systemctl`, nem com `pkill` + comando de inicialização: sem `sudo` o `pkill` não tem permissão sobre um processo de `root`, e subir um segundo Prometheus ou Grafana como usuário comum falha por falta de permissão e por conflito de porta.
+O ambiente inicia os dois serviços sozinho, como `root`, com `nohup` (não há `systemd`, então `systemctl` não funciona). Como os processos são de `root`, qualquer `pkill` ou comando de inicialização sobre eles precisa de **`sudo`**: sem ele, o `pkill` responde `Operation not permitted`, e subir um segundo Prometheus ou Grafana como usuário comum falha com `permission denied`. Na maioria das práticas você **não precisa reiniciar nada**: basta recarregar a configuração (seções 4.1 e 4.2). Se realmente precisar reiniciar, veja a seção 4.3.
 
 | Serviço | Porta dentro da VM | Endereço no seu navegador | Credenciais | Log |
 | --- | --- | --- | --- | --- |
@@ -79,7 +79,7 @@ curl http://localhost:9090/-/ready
 curl http://localhost:3000/api/health
 ```
 
-Se algum não responder, avise os monitores em vez de tentar reiniciá-lo.
+Se algum não responder, olhe o log (`tail /var/log/opaiot/prometheus.log` ou `tail /var/log/opaiot/grafana.log`) e reinicie-o conforme a seção 4.3; se continuar fora do ar, avise os monitores.
 
 ### 4.1 Recarregar a configuração do Prometheus
 
@@ -117,6 +117,35 @@ curl -s -u admin:admin -X POST http://localhost:3000/api/admin/provisioning/data
 A resposta esperada é `{"message":"Datasources config reloaded"}`.
 
 Datasources, pastas e dashboards também podem ser criados pela API HTTP, como faz o `configure_grafana.sh` da Aula 3; isso dispensa qualquer arquivo ou recarga.
+
+### 4.3 Reiniciar o Prometheus ou o Grafana (quando for realmente necessário)
+
+Reinicie só quando recarregar não resolver: o serviço travou ou foi encerrado, ou você alterou algo que só vale na partida (as opções de linha de comando do Prometheus ou o `grafana.ini`). Ficam alguns segundos sem o serviço. O ambiente usa estes mesmos comandos para iniciá-los.
+
+**Prometheus:**
+
+```bash
+sudo pkill -x prometheus
+sleep 2
+sudo bash -c 'nohup prometheus --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/var/lib/prometheus --web.listen-address=0.0.0.0:9090 >> /var/log/opaiot/prometheus.log 2>&1 &'
+```
+
+**Grafana:**
+
+```bash
+sudo pkill -x grafana
+sleep 2
+sudo bash -c 'nohup grafana-server --homepath=/usr/share/grafana --config=/etc/grafana/grafana.ini --packaging=deb cfg:server.http_addr=0.0.0.0 cfg:server.http_port=3000 >> /var/log/opaiot/grafana.log 2>&1 &'
+```
+
+Depois espere alguns segundos e confira com `curl http://localhost:9090/-/ready` e `curl http://localhost:3000/api/health`.
+
+Pontos de atenção:
+
+- **O `sudo bash -c '...'` é necessário.** Em `sudo nohup comando >> /var/log/opaiot/...`, o redirecionamento `>>` é feito pelo **seu** shell, sem privilégio, e dá `Permission denied`. Com `bash -c`, o redirecionamento acontece dentro do `sudo`.
+- **Use `-x`, não `-f`.** `pkill -x prometheus` e `pkill -x grafana` casam o nome exato do processo. O Grafana roda como `grafana server ...` (com espaço), então `pkill -f grafana-server` **não** o encontra. E `pkill -f prometheus` também encerraria o seu `2-prometheus.py` da Aula 1, porque o nome do arquivo contém "prometheus".
+- Se você parar só um e esquecer de subir de novo, o serviço fica fora do ar até alguém reiniciá-lo. Se o comando de início der erro, `tail /var/log/opaiot/<serviço>.log` mostra o motivo.
+- Lembre dos [limites de processos](#6-limites-de-memória-e-de-processos): cada `sudo` pode deixar um zumbi.
 
 ## 5. Interface web do Prometheus e do Grafana
 
@@ -193,8 +222,9 @@ Como `scp` e `sftp` não funcionam, há duas saídas:
 | Mensagem | Causa | O que fazer |
 | --- | --- | --- |
 | `System has not been booted with systemd ...` | A VM não usa `systemd`. | Não use `systemctl`/`journalctl`; veja as seções 4 e [Kafka em segundo plano](Aula_3_kafka/instalando_kafka_vm.md#7-executar-o-kafka-sem-systemd). |
-| `pkill: killing pid 30 failed: Operation not permitted` | O Prometheus pertence ao `root`. | Não reinicie; recarregue com `sudo pkill -HUP -x prometheus` (seção 4.1). |
-| `Error opening query log file ... permission denied` | Tentativa de subir um segundo Prometheus como usuário comum. | Não suba outro; o serviço já está em execução. |
+| `pkill: killing pid 30 failed: Operation not permitted` | O Prometheus pertence ao `root` e o `pkill` foi usado sem `sudo`. | Use `sudo`. Para só recarregar a configuração: `sudo pkill -HUP -x prometheus` (seção 4.1). Para reiniciar: seção 4.3. |
+| `Error opening query log file ... permission denied` | O Prometheus foi iniciado sem `sudo`; o usuário comum não pode gravar em `/var/lib/prometheus`. | Inicie com `sudo`, como na seção 4.3, depois de encerrar o que já roda na porta `9090` (senão há conflito de porta). |
+| `bash: /var/log/opaiot/...: Permission denied` ao usar `sudo nohup ... >> arquivo` | O redirecionamento é feito pelo seu shell, sem privilégio. | Use `sudo bash -c '... >> arquivo 2>&1 &'` (seção 4.3). |
 | Datasource criado em `/etc/grafana/provisioning` não aparece | O Grafana desta VM lê `/usr/share/grafana/conf/provisioning`. | Seção 4.2. |
 | `Comandos remotos diretos não são permitidos` / `administratively prohibited` / `Received message too long` | `ssh comando`, túnel e `scp`/`sftp` estão bloqueados. | Use sessão interativa (seção 2) e a seção 7. |
 | `pthread_create failed (EAGAIN)` | Limite de processos/threads atingido. | Seção 6. |
