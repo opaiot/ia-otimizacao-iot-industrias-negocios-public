@@ -4,7 +4,7 @@ Esta aula usa um dataset de qualidade do ar em ambientes internos para praticar 
 
 | Ambiente | Quando usar | Entrada |
 | --- | --- | --- |
-| VM do curso | Caminho principal da prática. Na VM, o Prometheus roda instalado diretamente no Ubuntu, sem Docker. | Seções 1 a 7 deste README |
+| VM do curso | Caminho principal da prática. A VM é um container Ubuntu em que o Prometheus já está instalado e em execução (sem Docker e sem systemd). Veja o [guia do ambiente da VM](../ambiente_vm.md). | Seções 1 a 7 deste README |
 | Docker local (opcional) | Somente para quem quiser executar a prática na própria máquina, fora da VM disponibilizada. Não faz parte do roteiro da aula. | [Opcional: execução local com Docker](#opcional-execução-local-com-docker) |
 
 ## Estrutura
@@ -99,38 +99,30 @@ No Windows, abra o PowerShell e confirme que o cliente SSH está disponível:
 ssh -V
 ```
 
-Defina o usuário e o IP da VM. Ajuste os valores conforme sua VM:
+Defina o usuário e a porta (recebidos por e-mail do curso; a porta é diferente para cada aluno) e o endereço da VM:
 
 ```powershell
-$VM_USER = "ubuntu"
-$VM_HOST = "192.168.0.10"
+$VM_USER = "opaiotXXX"      # usuário do e-mail
+$VM_HOST = "andromeda.lasdpc.icmc.usp.br"
+$VM_PORT = "PORTA"          # porta do e-mail
 ```
 
-Acesse a VM:
+Acesse a VM e informe a senha recebida por e-mail:
 
 ```powershell
-ssh "${VM_USER}@${VM_HOST}"
+ssh -p $VM_PORT "${VM_USER}@${VM_HOST}"
 ```
 
-Se a VM usa chave SSH, informe o arquivo da chave:
-
-```powershell
-ssh -i "$env:USERPROFILE\.ssh\id_ed25519" "${VM_USER}@${VM_HOST}"
-```
+> O acesso é só por **login interativo**: `ssh ... comando`, `scp`, `sftp` e túnel de portas (`ssh -L`) são bloqueados nesta VM. Por isso este roteiro não usa nenhum deles. Detalhes e outros limites do ambiente estão no [guia da VM](../ambiente_vm.md).
 
 ## 2. Clonar o repositório na VM
 
-Dentro da VM Linux, instale os pacotes básicos:
+Os pacotes básicos (`git`, `python3`, `pip`, `venv` e `curl`) já vêm instalados na VM. Se algum faltar, instale-o com `sudo apt update` e `sudo apt install -y <pacote>`.
+
+Clone o repositório dentro de `~/workspace`, a pasta preservada pelo ambiente:
 
 ```bash
-sudo apt update
-sudo apt install -y git python3 python3-pip python3-venv curl
-```
-
-Clone o repositório:
-
-```bash
-cd ~
+cd ~/workspace
 git clone https://github.com/opaiot/ia-otimizacao-iot-industrias-negocios-public.git
 cd ia-otimizacao-iot-industrias-negocios-public/M3/Aula_1_datasets
 ```
@@ -140,7 +132,7 @@ cd ia-otimizacao-iot-industrias-negocios-public/M3/Aula_1_datasets
 Entre na pasta de scripts:
 
 ```bash
-cd ~/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_1_datasets/scripts
+cd ~/workspace/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_1_datasets/scripts
 ```
 
 Crie e ative um ambiente virtual:
@@ -168,7 +160,7 @@ python 1-inspect.py
 Os arquivos serão gerados em:
 
 ```text
-~/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_1_datasets/outputs/
+~/workspace/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_1_datasets/outputs/
 ```
 
 Se você ainda não executou o script, consulte `outputs_example/` para ver uma amostra dos arquivos esperados.
@@ -208,115 +200,88 @@ O intervalo atual de publicação do script é de 5 segundos:
 INTERVAL_SECONDS = 5.0
 ```
 
-Para testar dentro da VM:
+Como o exportador ocupa o terminal, abra uma **segunda sessão SSH** na VM (outra janela do PowerShell) para testar:
 
 ```bash
 curl http://localhost:8000/metrics | head
 ```
 
-Para encerrar, pressione `Ctrl+C`.
+Para encerrar o exportador, volte ao primeiro terminal e pressione `Ctrl+C`.
+
+> Se preferir uma única sessão, inicie o exportador em segundo plano com `nohup python 2-prometheus.py > exportador.log 2>&1 &` e encerre-o antes de sair com `pkill -f 2-prometheus.py`.
 
 ### Configurar o Prometheus da VM
 
-Na VM do curso, o Prometheus está instalado diretamente no Ubuntu, sem Docker. Por isso ele acessa o exportador Python pelo target `localhost:8000`.
+Na VM do curso, o Prometheus **já está instalado e em execução**: o próprio ambiente o iniciou, como `root`, sem Docker e sem `systemd`. Ele acessa o exportador Python pelo target `localhost:8000`.
 
-Edite o arquivo:
+Edite o arquivo de configuração:
 
 ```bash
 sudo nano /etc/prometheus/prometheus.yml
 ```
 
-Inclua ou ajuste o job da aula:
+Na VM, o arquivo traz apenas o job `prometheus` (o próprio Prometheus). Acrescente o job da aula **dentro de `scrape_configs`**, com a mesma indentação, de modo que o arquivo fique assim:
 
 ```yaml
+global:
+  scrape_interval: 5s
+
 scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
   - job_name: "opaiot_iaq"
     scrape_interval: 5s
     static_configs:
       - targets: ["localhost:8000"]
 ```
 
-Valide a configuração:
+Salve com `Ctrl+O` e `Enter` e saia do `nano` com `Ctrl+X`. Valide a configuração:
 
 ```bash
 promtool check config /etc/prometheus/prometheus.yml
 ```
 
-Nesta VM, o Prometheus é reiniciado manualmente. Encerre o processo atual e suba novamente com:
+Recarregue a configuração **sem reiniciar** o Prometheus, enviando o sinal `SIGHUP` ao processo:
 
 ```bash
-pkill -f prometheus
-prometheus --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/var/lib/prometheus --web.listen-address=0.0.0.0:9090
+sudo pkill -HUP -x prometheus
 ```
 
-Deixe esse terminal aberto. Em outro terminal, com o `2-prometheus.py` rodando, teste:
+> **Para incluir um job, recarregar basta; reiniciar não é necessário.** O processo do Prometheus pertence ao `root`, então `pkill` e o comando de inicialização precisam de `sudo`: sem ele, o `pkill` responde `Operation not permitted` e um novo Prometheus falha com `permission denied`. Se mesmo assim precisar reiniciá-lo, use `sudo` e siga a [seção 4.3 do guia da VM](../ambiente_vm.md#43-reiniciar-o-prometheus-ou-o-grafana-quando-for-realmente-necessário). Cuidado com `pkill -f prometheus`: ele também encerra o seu `2-prometheus.py`, porque o nome do arquivo contém "prometheus"; prefira `pkill -x prometheus`.
+
+Com o `2-prometheus.py` rodando em outra sessão, aguarde cerca de 10 segundos e confira:
 
 ```bash
-curl http://localhost:8000/metrics | head
 curl http://localhost:9090/-/healthy
+curl -s http://localhost:9090/api/v1/targets | jq -r '.data.activeTargets[] | "\(.labels.job)\t\(.scrapeUrl)\t\(.health)"'
 ```
 
-Na interface do Prometheus, abra:
+O job `opaiot_iaq` deve aparecer com `up`. Você também pode ver o estado dos jobs no navegador, em `http://andromeda.lasdpc.icmc.usp.br:19XXX/targets` (`XXX` = os três dígitos do seu usuário `opaiotXXX`). Consulte uma das métricas pela API do Prometheus:
 
-```text
-http://localhost:9090/targets
-```
-
-O job `opaiot_iaq` deve aparecer como `UP`.
-
-Para iniciar o processo em segundo plano faça:
 ```bash
-nohup prometheus --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/var/lib/prometheus --web.listen-address=0.0.0.0:9090 > prometheus.log 2>&1 &
+curl -s 'http://localhost:9090/api/v1/query?query=opaiot_iaq_dataset_rows' | jq -c '.data.result'
 ```
 
-### Acessar as métricas pelo navegador do Windows
+### Ver as métricas no navegador
 
-Se quiser acessar as métricas pelo navegador do Windows, uma opção segura é abrir um túnel SSH em outro PowerShell:
+A interface do Prometheus abre no navegador do seu computador em `http://andromeda.lasdpc.icmc.usp.br:19XXX`, trocando `XXX` pelos três dígitos do seu usuário `opaiotXXX` (por exemplo, `opaiot001` usa a porta `19001`). Abra `/targets` para ver o job `opaiot_iaq` como `UP` e `/graph` para executar `opaiot_iaq_sensor_value`.
 
-```powershell
-ssh -L 8000:localhost:8000 "${VM_USER}@${VM_HOST}"
+O endereço do exportador, `http://localhost:8000/metrics`, não tem acesso externo (o túnel SSH `ssh -L` também está bloqueado): consulte-o de dentro da VM, com `curl`, como acima. Mais detalhes na [seção 5 do guia da VM](../ambiente_vm.md#5-interface-web-do-prometheus-e-do-grafana). Quem quiser rodar tudo na própria máquina pode usar a [alternativa local com Docker](#opcional-execução-local-com-docker).
+
+## 6. Ver e copiar os outputs da VM
+
+Os arquivos de `outputs/` são pequenos e podem ser lidos direto na VM:
+
+```bash
+cd ~/workspace/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_1_datasets/outputs
+cat inspection_summary.json
+cat columns_profile.csv
+head -n 3 normalized_events.jsonl
 ```
 
-Depois abra no Windows:
-
-```text
-http://localhost:8000/metrics
-```
-
-## 6. Copiar os outputs da VM para o Windows com scp
-
-Depois de executar `1-inspect.py` na VM, saia da sessão SSH ou abra outro PowerShell no Windows.
-
-Defina novamente as variáveis, se necessário:
-
-```powershell
-$VM_USER = "ubuntu"
-$VM_HOST = "192.168.0.10"
-```
-
-Crie uma pasta local para receber os arquivos:
-
-```powershell
-mkdir "$env:USERPROFILE\Downloads\opaIOT_Aula_1_datasets_outputs"
-```
-
-Copie a pasta `outputs` da VM para o Windows:
-
-```powershell
-scp -r "${VM_USER}@${VM_HOST}:~/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_1_datasets/outputs" "$env:USERPROFILE\Downloads\opaIOT_Aula_1_datasets_outputs"
-```
-
-Se a VM usa chave SSH:
-
-```powershell
-scp -i "$env:USERPROFILE\.ssh\id_ed25519" -r "${VM_USER}@${VM_HOST}:~/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_1_datasets/outputs" "$env:USERPROFILE\Downloads\opaIOT_Aula_1_datasets_outputs"
-```
-
-Confira no Windows:
-
-```powershell
-Get-ChildItem "$env:USERPROFILE\Downloads\opaIOT_Aula_1_datasets_outputs" -Recurse
-```
+O `scp` não funciona nesta VM. Para levar os arquivos para o seu computador, copie o conteúdo pelo terminal conforme a [seção 7 do guia da VM](../ambiente_vm.md#7-copiar-arquivos-pequenos-para-o-seu-computador) (a pasta `outputs/` compactada e codificada ocupa cerca de 11 KB). A pasta [`outputs_example/`](outputs_example/) do repositório traz uma execução de referência para comparar.
 
 ## 7. Problemas comuns
 
@@ -327,13 +292,11 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
-Se a porta `8000` estiver ocupada, edite a constante `PORT` no topo de `scripts/2-prometheus.py`.
+Se a porta `8000` estiver ocupada, edite a constante `PORT` no topo de `scripts/2-prometheus.py` e use a mesma porta no target do job `opaiot_iaq` em `/etc/prometheus/prometheus.yml` (depois recarregue com `sudo pkill -HUP -x prometheus`).
 
-Se o `scp` retornar `No such file or directory`, confira na VM se a pasta existe:
+Se o job `opaiot_iaq` aparecer como `down` em `/api/v1/targets`, confirme que o `2-prometheus.py` está em execução e que `curl http://localhost:8000/metrics` responde. Depois de corrigir, não é preciso recarregar o Prometheus de novo.
 
-```bash
-ls -lah ~/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_1_datasets/outputs
-```
+Se o `pkill` responder `Operation not permitted` ou o Prometheus falhar com `permission denied`, faltou `sudo` (o processo é do `root`). Para recarregar a configuração, use `sudo pkill -HUP -x prometheus`, como na seção 5; para reiniciar de verdade, veja a [seção 4.3 do guia da VM](../ambiente_vm.md#43-reiniciar-o-prometheus-ou-o-grafana-quando-for-realmente-necessário).
 
 Execute os scripts como arquivos:
 

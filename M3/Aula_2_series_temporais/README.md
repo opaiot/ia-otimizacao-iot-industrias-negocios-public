@@ -4,7 +4,7 @@ Esta aula usa o Grafana para visualizar séries temporais disponíveis em um Pro
 
 | Ambiente | Quando usar | Entrada |
 | --- | --- | --- |
-| VM do curso | Caminho principal da prática. A VM não usa Docker. | [roteiro_para_vm.md](roteiro_para_vm.md) |
+| VM do curso | Caminho principal da prática. A VM é um container Ubuntu (sem Docker nem `systemd`) com Prometheus e Grafana já instalados e em execução. | [roteiro_para_vm.md](roteiro_para_vm.md) |
 | Docker local | Alternativa para máquina local ou outro ambiente com Docker. | [docker-compose.yml](docker-compose.yml) |
 
 ## Opção 1 - VM do curso
@@ -17,14 +17,14 @@ roteiro_para_vm.md
 
 Esse guia mostra como:
 
-- acessar a VM por SSH;
-- verificar o Prometheus;
-- configurar o datasource do Grafana;
-- iniciar ou reiniciar o Grafana;
+- acessar a VM por SSH (usuário, porta e senha recebidos por e-mail; só login interativo);
+- verificar o Prometheus, que já está em execução;
+- configurar o datasource do Grafana pelo diretório de provisioning que o Grafana da VM realmente lê;
+- carregar o datasource sem reiniciar o Grafana;
 - criar um dashboard básico pela API;
-- acessar Grafana e Prometheus pelo Windows usando túnel SSH.
+- acessar o Grafana e o Prometheus da sua VM pelo navegador (portas `13XXX` e `19XXX`, onde `XXX` são os três dígitos do seu usuário) e consultar os dados pela linha de comando.
 
-Acesse o guia completo em [roteiro_para_vm.md](roteiro_para_vm.md).
+Acesse o guia completo em [roteiro_para_vm.md](roteiro_para_vm.md). Para entender o ambiente (container sem `systemd`, limites de memória e de processos), veja o [guia da VM](../ambiente_vm.md).
 
 ## Opção 2 - Docker local
 
@@ -61,11 +61,15 @@ usuário: admin
 senha: admin
 ```
 
-O datasource provisionado aponta para:
+O datasource provisionado aponta para o Prometheus de uma **VM dos monitores do curso** (porta `19201`), e não para o Prometheus da sua VM:
 
 ```text
 http://andromeda.lasdpc.icmc.usp.br:19201
 ```
+
+Esse endereço depende da VM dos monitores estar no ar. Para testar, rode `curl http://andromeda.lasdpc.icmc.usp.br:19201/-/healthy`: a resposta esperada é `Prometheus Server is Healthy.` Se não responder, o Grafana abre normalmente, mas o datasource mostra erro; avise os monitores.
+
+Para ver, nesse Grafana local, os dados da **sua própria VM** (por exemplo, os jobs que você configurou nas Aulas 1 e 3), troque a `url` do datasource por `http://andromeda.lasdpc.icmc.usp.br:19XXX`, onde `XXX` são os três dígitos do seu usuário `opaiotXXX`, e reinicie o Grafana local com `docker compose restart grafana`.
 
 Essa configuração está em:
 

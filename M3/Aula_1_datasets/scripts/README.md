@@ -15,13 +15,13 @@ Para alterar caminhos, porta ou intervalo de atualização, edite essas constant
 
 ## 1. Preparar o ambiente
 
-No terminal do Linux, entre na raiz do repositório. Ajuste o caminho conforme o local onde você clonou o projeto:
+No terminal do Linux, entre na raiz do repositório. Ajuste o caminho conforme o local onde você clonou o projeto (na VM do curso, clone dentro de `~/workspace`, a pasta preservada pelo ambiente):
 
 ```bash
-cd ~/ia-otimizacao-iot-industrias-negocios-public
+cd ~/workspace/ia-otimizacao-iot-industrias-negocios-public
 ```
 
-Se necessário, instale Python, `pip` e suporte a ambientes virtuais:
+Se necessário, instale Python, `pip` e suporte a ambientes virtuais (na VM do curso eles já vêm instalados):
 
 ```bash
 sudo apt update
@@ -98,9 +98,9 @@ Para encerrar o script, pressione `Ctrl+C`.
 
 ### Quando o Prometheus está instalado na VM
 
-Se o Prometheus estiver instalado diretamente no Ubuntu, sem Docker, ele consegue acessar o exportador Python por `localhost:8000`.
+Na VM do curso, o Prometheus já está instalado e em execução: o próprio ambiente o iniciou, como `root`, sem Docker e sem `systemd`. Ele consegue acessar o exportador Python por `localhost:8000`.
 
-Edite o arquivo de configuração do Prometheus. Em instalações comuns no Ubuntu, ele fica em:
+Edite o arquivo de configuração do Prometheus:
 
 ```bash
 sudo nano /etc/prometheus/prometheus.yml
@@ -116,7 +116,7 @@ scrape_configs:
       - targets: ["localhost:8000"]
 ```
 
-Se o arquivo já tiver uma seção `scrape_configs`, adicione apenas o bloco do job `opaiot_iaq` dentro dela.
+Se o arquivo já tiver uma seção `scrape_configs` (na VM, ele traz o job `prometheus`), adicione apenas o bloco do job `opaiot_iaq` dentro dela, com a mesma indentação dos outros jobs.
 
 Valide a configuração:
 
@@ -124,38 +124,26 @@ Valide a configuração:
 promtool check config /etc/prometheus/prometheus.yml
 ```
 
-Reinicie o Prometheus. Nesta VM, o Prometheus é iniciado manualmente, então encerre o processo atual e suba novamente com o arquivo de configuração:
+Recarregue a configuração **sem reiniciar** o Prometheus, enviando o sinal `SIGHUP` ao processo:
 
 ```bash
-pkill -f prometheus
-prometheus --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/var/lib/prometheus --web.listen-address=0.0.0.0:9090
+sudo pkill -HUP -x prometheus
 ```
 
-O comando acima mantém o Prometheus rodando no terminal. Deixe esse terminal aberto enquanto usa a interface gráfica.
-
-Se quiser confirmar que o Prometheus voltou:
-
-```bash
-curl http://localhost:9090/-/healthy
-```
+Para incluir um job, recarregar basta; não é preciso reiniciar. O processo pertence ao `root`, então `pkill` e o comando de inicialização exigem `sudo`: sem ele, o `pkill` responde `Operation not permitted` e um novo Prometheus falha com `permission denied`. Se precisar reiniciar mesmo assim, use `sudo` e veja a [seção 4.3 do guia da VM](../../ambiente_vm.md#43-reiniciar-o-prometheus-ou-o-grafana-quando-for-realmente-necessário). Atenção: `pkill -f prometheus` também encerraria o `2-prometheus.py` (o nome do arquivo contém "prometheus"); prefira `pkill -x prometheus`.
 
 Com o script `2-prometheus.py` rodando em outro terminal, teste:
 
 ```bash
 curl http://localhost:8000/metrics | head
 curl http://localhost:9090/-/healthy
+curl -s http://localhost:9090/api/v1/targets | jq -r '.data.activeTargets[] | "\(.labels.job)\t\(.health)"'
 ```
 
-Na interface do Prometheus, abra:
+O job `opaiot_iaq` deve aparecer como `up`. Depois consulte a métrica pela API do Prometheus. A interface web do Prometheus abre no seu navegador em `http://andromeda.lasdpc.icmc.usp.br:19XXX` (`XXX` = os três dígitos do seu usuário `opaiotXXX`; veja o [guia da VM](../../ambiente_vm.md#5-interface-web-do-prometheus-e-do-grafana)):
 
-```text
-http://localhost:9090/targets
-```
-
-O job `opaiot_iaq` deve aparecer como `UP`. Depois consulte:
-
-```promql
-opaiot_iaq_sensor_value
+```bash
+curl -s 'http://localhost:9090/api/v1/query?query=opaiot_iaq_sensor_value' | jq '.data.result | length'
 ```
 
 ### Quando o Prometheus está em Docker

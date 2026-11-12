@@ -3,8 +3,7 @@
 Laboratório de observabilidade e resiliência para um fluxo de telemetria IoT via
 MQTT. Material extra do [Módulo 3](../../README.md), apresentado na monitoria de
 encerramento do curso; os slides de apoio estão em
-[slides_monitoria.pdf](slides_monitoria.pdf) (também publicados em
-[OPAIOT-2026](https://github.com/JunioCesarFerreira/OPAIOT-2026/tree/main/Extras/Apresenta%C3%A7%C3%A3o%20-%20Observabilidade%20e%20Resili%C3%AAncia%20em%20Sistemas%20IoT)).
+[slides_monitoria.pdf](slides_monitoria.pdf).
 
 Diferente do laboratório de [M2/Extras/Hands_On_HMAC_MQTT](../../../M2/Extras/Hands_On_HMAC_MQTT/),
 aqui o broker não usa TLS nem autenticação: o foco é inteiramente observar o

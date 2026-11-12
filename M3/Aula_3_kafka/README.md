@@ -4,6 +4,8 @@ Esta aula prática apresenta o Apache Kafka como infraestrutura para pipelines o
 
 Para execução com Docker veja [Aula_3_kafka](./docker/README.md).
 
+> **Na VM do curso**, leia antes o [guia do ambiente da VM](../ambiente_vm.md): ela é um container Ubuntu sem `systemd`, com 1 GiB de memória e limite de 256 processos/threads, e o Prometheus e o Grafana já estão em execução.
+
 ## 1. Visão conceitual
 
 Kafka não deve ser entendido apenas como uma fila de mensagens. Nesta prática, ele aparece como um **log distribuído de eventos**, em que producers publicam eventos em tópicos, tópicos são divididos em partitions e consumers leem esses eventos mantendo offsets.
@@ -105,10 +107,10 @@ Use estes materiais nesta ordem:
 
 ### Roteiro resumido
 
-Entre no diretório da aula:
+Entre no diretório da aula (na VM, o repositório fica em `~/workspace`):
 
 ```bash
-cd M3/Aula_3_kafka
+cd ~/workspace/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_3_kafka
 ```
 
 Crie e ative o ambiente Python:
@@ -119,7 +121,7 @@ source .venv/bin/activate
 pip install -r scripts/requirements.txt
 ```
 
-Com o Kafka rodando em `localhost:9092`, crie o tópico:
+Com o Kafka rodando em `localhost:9092` (veja [`instalando_kafka_vm.md`](instalando_kafka_vm.md); os comandos `kafka-*.sh` abaixo supõem o `PATH` configurado no passo 6 dele), crie o tópico:
 
 ```bash
 kafka-topics.sh \
@@ -140,13 +142,20 @@ kafka-topics.sh \
   --bootstrap-server localhost:9092
 ```
 
-Em um terminal, rode o producer:
+> **Em cada nova sessão SSH**, entre no diretório da aula e ative o ambiente virtual antes de rodar qualquer `python scripts/...` (a sessão começa em `~/workspace`, sem o venv):
+>
+> ```bash
+> cd ~/workspace/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_3_kafka
+> source .venv/bin/activate
+> ```
+
+Em um terminal (uma sessão SSH), rode o producer:
 
 ```bash
 python scripts/producer.py
 ```
 
-Em outro terminal, rode o consumer com métricas:
+Em outro terminal (outra sessão SSH), rode o consumer com métricas:
 
 ```bash
 python scripts/consumer_metrics.py
@@ -168,7 +177,7 @@ Observe producer e consumer juntos:
 - offset de cada mensagem;
 - métricas atualizadas em `/metrics`.
 
-Teste consumers no mesmo grupo:
+Teste consumers no mesmo grupo, **cada um em sua própria sessão SSH** (com o venv ativo, como acima):
 
 ```bash
 METRICS_PORT=8001 CONSUMER_ID=consumer-1 python scripts/consumer_metrics.py
@@ -178,7 +187,9 @@ METRICS_PORT=8003 CONSUMER_ID=consumer-3 python scripts/consumer_metrics.py
 
 Todos usam o grupo padrão `air-quality-processors`. Com 3 partitions, a tendência é cada consumer receber uma partition.
 
-Teste grupos diferentes:
+Na VM, cada consumer usa cerca de 6 threads do limite de 256 do container (veja o [guia da VM](../ambiente_vm.md#6-limites-de-memória-e-de-processos)); não é preciso passar de 3 consumers neste experimento.
+
+Teste grupos diferentes, também um por sessão:
 
 ```bash
 GROUP_ID=air-quality-processors METRICS_PORT=8011 CONSUMER_ID=processors-1 python scripts/consumer_metrics.py
@@ -198,15 +209,16 @@ O consumer deve retomar a leitura a partir do offset salvo.
 
 ### Prometheus e Grafana
 
-Para configurar o Prometheus seguindo o mesmo procedimento da Aula 1, execute:
+Na VM, o Prometheus **já está em execução** (o ambiente o inicia, como `root`). Para adicionar o job da prática, rode o script com `--no-restart` e depois recarregue a configuração com `SIGHUP`, o mesmo procedimento da Aula 1:
 
 ```bash
-bash scripts/configure_prometheus.sh
+bash scripts/configure_prometheus.sh --no-restart
+sudo pkill -HUP -x prometheus
 ```
 
-Execute esse comando na VM Ubuntu onde o Prometheus está instalado, a partir do diretório `M3/Aula_3_kafka`.
+Execute os comandos na VM, a partir do diretório `M3/Aula_3_kafka`.
 
-O script faz backup do `prometheus.yml`, adiciona o job da prática, valida com `promtool check config` e reinicia o Prometheus usando `pkill`, como na Aula 1. O job configurado é:
+O script faz backup do `prometheus.yml`, adiciona o job da prática e valida com `promtool check config`. O job configurado é:
 
 ```yaml
 scrape_configs:
@@ -220,14 +232,20 @@ scrape_configs:
 Para múltiplos consumers:
 
 ```bash
-bash scripts/configure_prometheus.sh --targets localhost:8001,localhost:8002,localhost:8003
+bash scripts/configure_prometheus.sh --no-restart --targets localhost:8001,localhost:8002,localhost:8003
+sudo pkill -HUP -x prometheus
 ```
 
-Por padrão, o Prometheus fica em primeiro plano. Para iniciar em segundo plano:
+> **Cuidado com a etapa de reinício do script.** Sem `--no-restart` (ou com `--background`), depois de validar a configuração o script tenta encerrar o Prometheus com `pkill` e subi-lo de novo com `prometheus --config.file=...`. Como usuário comum isso falha: o `pkill` responde `Operation not permitted` e o novo Prometheus falha com `permission denied`. Com `sudo bash scripts/configure_prometheus.sh --background` o script tem permissão e reinicia o Prometheus do ambiente (o log vai para `prometheus.log` no diretório atual; sem `--background`, o Prometheus fica preso ao seu terminal). Como recarregar basta, prefira `--no-restart` seguido de `sudo pkill -HUP -x prometheus`.
+
+Aguarde cerca de 10 segundos e confira o target e os dados (com o consumer rodando):
 
 ```bash
-bash scripts/configure_prometheus.sh --background
+curl -s http://localhost:9090/api/v1/targets | jq -r '.data.activeTargets[] | "\(.labels.job)\t\(.health)"'
+curl -s 'http://localhost:9090/api/v1/query?query=sum(iot_events_consumed_total)' | jq -c '.data.result'
 ```
+
+O job `iot-kafka-consumers` deve aparecer com `up`.
 
 Para configurar o Grafana já instalado na VM:
 
@@ -251,6 +269,12 @@ Dashboard:
 
 ```text
 http://localhost:3000/d/iot-kafka-telemetry
+```
+
+Esse é o endereço de dentro da VM. No navegador do seu computador, o dashboard abre em `http://andromeda.lasdpc.icmc.usp.br:13XXX/d/iot-kafka-telemetry`, trocando `XXX` pelos três dígitos do seu usuário `opaiotXXX` (veja a [seção 5 do guia da VM](../ambiente_vm.md#5-interface-web-do-prometheus-e-do-grafana)); o login é `admin` / `admin`. O Prometheus abre em `http://andromeda.lasdpc.icmc.usp.br:19XXX/targets`. Para conferir pela linha de comando que o dashboard foi criado:
+
+```bash
+curl -s -u admin:admin 'http://localhost:3000/api/search?query=Kafka' | jq -c '.[] | {uid, title}'
 ```
 
 Consultas PromQL úteis:
@@ -278,6 +302,13 @@ Painéis criados no Grafana:
 Para o passo a passo completo, consulte [scripts/README.md](scripts/README.md).
 
 > **Caso precise reiniciar o Grafana**
+>
+> O `configure_grafana.sh` usa a API HTTP e aplica as mudanças na hora, então normalmente não é preciso reiniciar. Se mesmo assim precisar, o Grafana da VM pertence ao `root` e roda sem `systemd`: use `sudo`, e `sudo bash -c` para que o redirecionamento do log também tenha permissão.
+>
 > ```bash
-> nohup grafana-server --homepath=/usr/share/grafana --config=/etc/grafana/grafana.ini > grafana.log 2>&1 &
->```
+> sudo pkill -x grafana
+> sleep 2
+> sudo bash -c 'nohup grafana-server --homepath=/usr/share/grafana --config=/etc/grafana/grafana.ini --packaging=deb cfg:server.http_addr=0.0.0.0 cfg:server.http_port=3000 >> /var/log/opaiot/grafana.log 2>&1 &'
+> ```
+>
+> Depois confira com `curl http://localhost:3000/api/health`. Detalhes na [seção 4.3 do guia da VM](../ambiente_vm.md#43-reiniciar-o-prometheus-ou-o-grafana-quando-for-realmente-necessário).

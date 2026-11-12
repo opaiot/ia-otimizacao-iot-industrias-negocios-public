@@ -53,7 +53,7 @@ provisionados.
 ## Gerar os artefatos de inspeção
 
 O serviço `inspect` roda `1-inspect.py` uma vez e grava os arquivos em
-[`../outputs`](../outputs) no host:
+`../outputs/` no host (a pasta é criada na primeira execução; o repositório traz só `../outputs_example/`):
 
 ```bash
 docker compose --profile inspect run --rm inspect
