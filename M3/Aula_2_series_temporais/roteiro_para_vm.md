@@ -9,7 +9,7 @@ Este passo a passo **não usa Docker nem `systemd`**: a VM é um container Ubunt
 No PowerShell, defina o usuário e a porta (recebidos por e-mail do curso, a porta é diferente para cada aluno) e o endereço da VM:
 
 ```powershell
-$VM_USER = "opaiotNNN"      # usuário do e-mail
+$VM_USER = "opaiotXXX"      # usuário do e-mail
 $VM_HOST = "andromeda.lasdpc.icmc.usp.br"
 $VM_PORT = "PORTA"          # porta do e-mail
 ```
@@ -291,6 +291,8 @@ usuário: admin
 senha: admin
 ```
 
+Ao entrar pela primeira vez pelo navegador, o Grafana pode pedir para trocar a senha do `admin`. Se você trocar, use a nova senha em todos os comandos da linha de comando (`-u admin:<nova-senha>`, `GRAFANA_PASSWORD=...`), inclusive no `configure_grafana.sh` da Aula 3; caso contrário eles falham com erro de autenticação.
+
 Dentro do Grafana, o datasource `Prometheus - Aula 2` continua apontando para `http://localhost:9090`, como você configurou no passo 4: o Grafana roda dentro da VM e enxerga o Prometheus por esse endereço. Não troque a URL do datasource pelo endereço `:19XXX`, que serve só para o seu navegador.
 
 ### Pela linha de comando
@@ -338,4 +340,4 @@ Se o datasource não aparecer na lista depois do `reload`, confirme que o arquiv
 
 Se o endereço `http://andromeda.lasdpc.icmc.usp.br:13XXX` (Grafana) ou `:19XXX` (Prometheus) não abrir no navegador, confira se o `XXX` corresponde ao seu usuário e se o serviço responde por dentro da VM (`curl http://localhost:3000/api/health`). Se responde por dentro e não abre por fora, avise os monitores. O túnel SSH (`ssh -L`) não funciona nesta VM e não é necessário.
 
-Se o login `admin/admin` não funcionar, a senha já foi alterada na VM. Use a senha definida anteriormente ou redefina conforme a política do ambiente.
+Se o login `admin/admin` não funcionar (os comandos `curl` respondem com erro `401`), a senha já foi alterada, por exemplo no primeiro acesso pelo navegador. Defina `GRAFANA_PASSWORD` com a senha atual e repita o comando; se ninguém souber a senha, avise os monitores.

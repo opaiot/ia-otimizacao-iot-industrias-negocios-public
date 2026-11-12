@@ -24,7 +24,7 @@ Ferramentas que já vêm na VM: `git`, `python3`, `pip`, `venv`, `node`/`npm`, `
 No PowerShell do Windows (ou no terminal do Linux/macOS), use o **usuário, a porta e a senha** que você recebeu por e-mail do curso. A porta SSH **não é a mesma para todos os alunos**:
 
 ```powershell
-$VM_USER = "opaiotNNN"                       # troque pelo usuário do e-mail
+$VM_USER = "opaiotXXX"                       # troque pelo usuário do e-mail
 $VM_HOST = "andromeda.lasdpc.icmc.usp.br"
 $VM_PORT = "PORTA"                           # troque pela porta do e-mail
 
@@ -156,7 +156,7 @@ O Prometheus e o Grafana da sua VM abrem no **navegador do seu computador**, sem
 | Prometheus | `http://andromeda.lasdpc.icmc.usp.br:19XXX` |
 | Grafana | `http://andromeda.lasdpc.icmc.usp.br:13XXX` |
 
-Troque `XXX` pelos três dígitos do usuário `opaiotXXX` que você recebeu por e-mail. Por exemplo, para o usuário `opaiot001` os endereços são `...:19001` (Prometheus) e `...:13001` (Grafana); para `opaiot120`, `...:19120` e `...:13120`. No Grafana, entre com `admin` / `admin`. Páginas úteis do Prometheus: `/targets` (estado dos jobs) e `/graph` (consultas PromQL).
+Troque `XXX` pelos três dígitos do usuário `opaiotXXX` que você recebeu por e-mail. Por exemplo, para o usuário `opaiot001` os endereços são `...:19001` (Prometheus) e `...:13001` (Grafana); para `opaiot120`, `...:19120` e `...:13120`. No Grafana, entre com `admin` / `admin`. Ao entrar pela primeira vez pelo navegador, o Grafana pode pedir para trocar a senha do `admin`. Se você trocar, use a nova senha em todos os comandos da linha de comando (`-u admin:<nova-senha>`, `GRAFANA_PASSWORD=...`), inclusive no `configure_grafana.sh` da Aula 3; caso contrário eles falham com erro de autenticação. Páginas úteis do Prometheus: `/targets` (estado dos jobs) e `/graph` (consultas PromQL).
 
 Estes são os endereços externos disponibilizados pelo curso. O exportador da Aula 1 (porta `8000`) e os consumers da Aula 3 (portas `8000` a `8003`) não têm endereço externo: consulte-os **de dentro da VM**, com `curl`, ou pelo próprio Prometheus.
 

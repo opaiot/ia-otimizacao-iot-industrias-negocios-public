@@ -102,7 +102,7 @@ ssh -V
 Defina o usuário e a porta (recebidos por e-mail do curso; a porta é diferente para cada aluno) e o endereço da VM:
 
 ```powershell
-$VM_USER = "opaiotNNN"      # usuário do e-mail
+$VM_USER = "opaiotXXX"      # usuário do e-mail
 $VM_HOST = "andromeda.lasdpc.icmc.usp.br"
 $VM_PORT = "PORTA"          # porta do e-mail
 ```
@@ -292,7 +292,7 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
-Se a porta `8000` estiver ocupada, edite a constante `PORT` no topo de `scripts/2-prometheus.py`.
+Se a porta `8000` estiver ocupada, edite a constante `PORT` no topo de `scripts/2-prometheus.py` e use a mesma porta no target do job `opaiot_iaq` em `/etc/prometheus/prometheus.yml` (depois recarregue com `sudo pkill -HUP -x prometheus`).
 
 Se o job `opaiot_iaq` aparecer como `down` em `/api/v1/targets`, confirme que o `2-prometheus.py` está em execução e que `curl http://localhost:8000/metrics` responde. Depois de corrigir, não é preciso recarregar o Prometheus de novo.
 

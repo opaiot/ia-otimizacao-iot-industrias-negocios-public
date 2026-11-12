@@ -142,6 +142,13 @@ kafka-topics.sh \
   --bootstrap-server localhost:9092
 ```
 
+> **Em cada nova sessão SSH**, entre no diretório da aula e ative o ambiente virtual antes de rodar qualquer `python scripts/...` (a sessão começa em `~/workspace`, sem o venv):
+>
+> ```bash
+> cd ~/workspace/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_3_kafka
+> source .venv/bin/activate
+> ```
+
 Em um terminal (uma sessão SSH), rode o producer:
 
 ```bash
@@ -170,7 +177,7 @@ Observe producer e consumer juntos:
 - offset de cada mensagem;
 - métricas atualizadas em `/metrics`.
 
-Teste consumers no mesmo grupo:
+Teste consumers no mesmo grupo, **cada um em sua própria sessão SSH** (com o venv ativo, como acima):
 
 ```bash
 METRICS_PORT=8001 CONSUMER_ID=consumer-1 python scripts/consumer_metrics.py
@@ -182,7 +189,7 @@ Todos usam o grupo padrão `air-quality-processors`. Com 3 partitions, a tendên
 
 Na VM, cada consumer usa cerca de 6 threads do limite de 256 do container (veja o [guia da VM](../ambiente_vm.md#6-limites-de-memória-e-de-processos)); não é preciso passar de 3 consumers neste experimento.
 
-Teste grupos diferentes:
+Teste grupos diferentes, também um por sessão:
 
 ```bash
 GROUP_ID=air-quality-processors METRICS_PORT=8011 CONSUMER_ID=processors-1 python scripts/consumer_metrics.py

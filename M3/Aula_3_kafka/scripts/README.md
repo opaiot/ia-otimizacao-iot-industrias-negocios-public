@@ -58,6 +58,13 @@ Instale as dependências:
 pip install -r scripts/requirements.txt
 ```
 
+> **Nas próximas etapas você vai usar várias sessões SSH. Em cada nova sessão**, entre no diretório da aula e ative o ambiente virtual antes de rodar qualquer `python scripts/...` (a sessão começa em `~/workspace`, sem o venv):
+>
+> ```bash
+> cd ~/workspace/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_3_kafka
+> source .venv/bin/activate
+> ```
+
 ## 3. Verificar se o Kafka está rodando
 
 Se o Kafka foi instalado em `/opt/kafka`, confirme que ele está rodando:
@@ -332,7 +339,7 @@ scrape_configs:
           - "localhost:8003"
 ```
 
-O script mantém os demais jobs do arquivo, como o `prometheus` (e o `opaiot_iaq`, se você fez a Aula 1).
+O script mantém os demais jobs do arquivo, como o `prometheus` (e o `opaiot_iaq`, se você fez a Aula 1). Como o exportador da Aula 1 e o consumer desta aula usam a mesma porta `8000`, o job `opaiot_iaq` passa a coletar as métricas do consumer também. Isso não atrapalha a prática, mas, se quiser evitar a confusão, remova o bloco do `opaiot_iaq` do `prometheus.yml` (com `sudo nano`) antes de recarregar.
 
 > **Cuidado com a etapa de reinício do script.** Sem `--no-restart`, e também com `--background`, depois de validar a configuração o script tenta encerrar o Prometheus com `pkill` e subi-lo de novo com `prometheus --config.file=... --storage.tsdb.path=/var/lib/prometheus`. Como usuário comum isso falha: o `pkill` responde `Operation not permitted` e o novo Prometheus falha com `permission denied` (a configuração já foi gravada, mas não recarregada). Com `sudo bash scripts/configure_prometheus.sh --background` o script tem permissão e reinicia o Prometheus do ambiente: o log vai para `prometheus.log` no diretório atual, e sem `--background` o Prometheus fica preso ao seu terminal. Como recarregar basta, prefira `--no-restart` seguido de `sudo pkill -HUP -x prometheus`. Para reiniciar à mão, veja a [seção 4.3 do guia da VM](../../ambiente_vm.md#43-reiniciar-o-prometheus-ou-o-grafana-quando-for-realmente-necessário).
 
