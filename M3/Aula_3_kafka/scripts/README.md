@@ -24,12 +24,12 @@ scripts/
 
 ## 1. Pré-requisitos
 
-Execute a prática em uma VM Ubuntu com:
+Execute a prática na VM do curso (um container Ubuntu; veja o [guia do ambiente da VM](../../ambiente_vm.md)) com:
 
 - Kafka em execução em `localhost:9092`;
-- Python 3, `venv` e `pip`;
-- `curl`, usado pelos scripts de configuração;
-- Prometheus e Grafana instalados, para a parte de observabilidade.
+- Python 3, `venv` e `pip` (já vêm na VM);
+- `curl` e `jq`, usados pelos scripts de configuração e pelas verificações (já vêm na VM);
+- Prometheus e Grafana, para a parte de observabilidade (já instalados e em execução na VM).
 
 Se ainda não instalou o Kafka, siga antes o roteiro:
 
@@ -39,10 +39,10 @@ Se ainda não instalou o Kafka, siga antes o roteiro:
 
 ## 2. Preparar o ambiente Python
 
-A partir do diretório da aula:
+A partir do diretório da aula (na VM, o repositório fica em `~/workspace`):
 
 ```bash
-cd M3/Aula_3_kafka
+cd ~/workspace/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_3_kafka
 ```
 
 Crie e ative um ambiente virtual:
@@ -60,14 +60,21 @@ pip install -r scripts/requirements.txt
 
 ## 3. Verificar se o Kafka está rodando
 
-Se o Kafka foi instalado em `/opt/kafka`, em um terminal separado:
+Se o Kafka foi instalado em `/opt/kafka`, confirme que ele está rodando:
+
+```bash
+pgrep -af 'kafka\.Kafka'
+ss -ltn | grep 9092
+```
+
+Se não estiver, inicie-o **em segundo plano**, como no passo 4 do roteiro de instalação (na VM não há `systemd`, e o heap precisa ser limitado por causa da memória do container):
 
 ```bash
 cd /opt/kafka
-bin/kafka-server-start.sh config/server.properties
+KAFKA_HEAP_OPTS="-Xms256m -Xmx512m" bin/kafka-server-start.sh -daemon config/server.properties
 ```
 
-Em outro terminal, teste:
+Aguarde alguns segundos e teste:
 
 ```bash
 kafka-topics.sh --list --bootstrap-server localhost:9092
@@ -220,6 +227,8 @@ air-quality-processors
 
 Com 3 partitions e 3 consumers, a tendência é cada consumer receber uma partition.
 
+Cada consumer usa cerca de 6 threads do limite de 256 processos/threads do container da VM. Não passe de 3 consumers e evite rodar vários comandos `kafka-*.sh` ao mesmo tempo (veja o [guia da VM](../../ambiente_vm.md#6-limites-de-memória-e-de-processos)).
+
 ## 9. Experimento: grupos diferentes
 
 Agora execute consumers com grupos diferentes:
@@ -267,15 +276,16 @@ LAG
 
 ## 11. Configurar Prometheus
 
-O procedimento segue a lógica usada na Aula 1: configurar o target no `prometheus.yml`, validar com `promtool check config` e reiniciar o Prometheus.
+O procedimento segue a lógica usada na Aula 1: configurar o target no `prometheus.yml`, validar com `promtool check config` e **recarregar** o Prometheus. Na VM do curso o Prometheus já está em execução (iniciado pelo ambiente, como `root`), então ele é recarregado com `SIGHUP`, e não reiniciado.
 
 Para configurar automaticamente o target padrão `localhost:8000`, execute:
 
 ```bash
-bash scripts/configure_prometheus.sh
+bash scripts/configure_prometheus.sh --no-restart
+sudo pkill -HUP -x prometheus
 ```
 
-Execute esse comando na VM Ubuntu onde o Prometheus está instalado, a partir do diretório `M3/Aula_3_kafka`.
+Execute os comandos na VM, a partir do diretório `M3/Aula_3_kafka`.
 
 O script faz backup do arquivo atual antes de alterar:
 
@@ -297,14 +307,16 @@ scrape_configs:
 Se estiver rodando vários consumers, informe os targets:
 
 ```bash
-bash scripts/configure_prometheus.sh \
+bash scripts/configure_prometheus.sh --no-restart \
   --targets localhost:8001,localhost:8002,localhost:8003
+sudo pkill -HUP -x prometheus
 ```
 
 Ou passe os targets como argumentos:
 
 ```bash
-bash scripts/configure_prometheus.sh localhost:8001 localhost:8002 localhost:8003
+bash scripts/configure_prometheus.sh --no-restart localhost:8001 localhost:8002 localhost:8003
+sudo pkill -HUP -x prometheus
 ```
 
 O resultado esperado no `prometheus.yml` é:
@@ -320,38 +332,18 @@ scrape_configs:
           - "localhost:8003"
 ```
 
-Se quiser apenas atualizar e validar a configuração, sem reiniciar o Prometheus:
+O script mantém os demais jobs do arquivo, como o `prometheus` (e o `opaiot_iaq`, se você fez a Aula 1).
 
-```bash
-bash scripts/configure_prometheus.sh --no-restart
-```
+> **Cuidado com a etapa de reinício do script.** Sem `--no-restart`, e também com `--background`, depois de validar a configuração o script tenta encerrar o Prometheus com `pkill` e subi-lo de novo com `prometheus --config.file=... --storage.tsdb.path=/var/lib/prometheus`. Como usuário comum isso falha: o `pkill` responde `Operation not permitted` e o novo Prometheus falha com `permission denied` (a configuração já foi gravada, mas não recarregada). Com `sudo bash scripts/configure_prometheus.sh --background` o script tem permissão e reinicia o Prometheus do ambiente: o log vai para `prometheus.log` no diretório atual, e sem `--background` o Prometheus fica preso ao seu terminal. Como recarregar basta, prefira `--no-restart` seguido de `sudo pkill -HUP -x prometheus`. Para reiniciar à mão, veja a [seção 4.3 do guia da VM](../../ambiente_vm.md#43-reiniciar-o-prometheus-ou-o-grafana-quando-for-realmente-necessário).
 
-Por padrão, depois de validar a configuração, o script reinicia o Prometheus com o procedimento usado na Aula 1:
-
-```bash
-pkill -f prometheus
-prometheus --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/var/lib/prometheus --web.listen-address=0.0.0.0:9090
-```
-
-O Prometheus fica rodando em primeiro plano. Deixe esse terminal aberto enquanto usa a interface.
-
-Se quiser iniciar em segundo plano, use:
-
-```bash
-bash scripts/configure_prometheus.sh --background
-```
-
-Depois confira:
+Depois de recarregar, aguarde cerca de 10 segundos e confira:
 
 ```bash
 curl http://localhost:9090/-/healthy
+curl -s http://localhost:9090/api/v1/targets | jq -r '.data.activeTargets[] | "\(.labels.job)\t\(.health)"'
 ```
 
-Na interface do Prometheus, abra:
-
-```text
-http://localhost:9090/targets
-```
+O job `iot-kafka-consumers` deve aparecer com `up` (o consumer precisa estar rodando). No navegador do seu computador, a página de targets abre em `http://andromeda.lasdpc.icmc.usp.br:19XXX/targets`, trocando `XXX` pelos três dígitos do seu usuário `opaiotXXX`.
 
 ## 12. Configurar Grafana
 
@@ -396,10 +388,23 @@ O script cria ou atualiza:
 - pasta `OpAIoT`;
 - dashboard `Kafka IoT - Telemetria Observavel`.
 
-Depois acesse:
+Depois acesse o dashboard. De dentro da VM:
 
 ```text
 http://localhost:3000/d/iot-kafka-telemetry
+```
+
+No navegador do seu computador (troque `XXX` pelos três dígitos do seu usuário `opaiotXXX`; login `admin` / `admin`; veja a [seção 5 do guia da VM](../../ambiente_vm.md#5-interface-web-do-prometheus-e-do-grafana)):
+
+```text
+http://andromeda.lasdpc.icmc.usp.br:13XXX/d/iot-kafka-telemetry
+```
+
+Para conferir pela linha de comando que o data source e o dashboard foram criados:
+
+```bash
+curl -s -u admin:admin http://localhost:3000/api/datasources | jq -c '.[] | {name, uid}'
+curl -s -u admin:admin 'http://localhost:3000/api/search?query=Kafka' | jq -c '.[] | {uid, title}'
 ```
 
 Se usar token de API ou service account:
@@ -520,6 +525,10 @@ METRICS_PORT=8004 CONSUMER_ID=consumer-4 python scripts/consumer_metrics.py
 
 Se o tópico já existir, use `--if-not-exists` no comando de criação ou apenas descreva o tópico existente.
 
+Se um comando `kafka-*.sh` falhar com `pthread_create failed (EAGAIN)`, `Failed to start the native thread` ou `Resource temporarily unavailable`, o limite de 256 processos/threads do container foi atingido. Encerre consumers e produtores que não está usando, rode um comando `kafka-*.sh` de cada vez e repita. Veja o [guia da VM](../../ambiente_vm.md#6-limites-de-memória-e-de-processos).
+
+Se o `configure_prometheus.sh` terminar com `Operation not permitted` ou `permission denied`, você rodou a etapa de reinício do script sem `sudo`. A configuração já foi gravada; basta recarregar com `sudo pkill -HUP -x prometheus` e, nas próximas vezes, usar `--no-restart`.
+
 Se o consumer não receber eventos, verifique:
 
 ```bash
@@ -541,7 +550,7 @@ Se o Grafana não conseguir consultar o Prometheus, confira a URL configurada no
 http://localhost:9090
 ```
 
-Se o Grafana estiver em container, `localhost` dentro do container aponta para o próprio container. Nesse caso, use um endereço acessível ao container, por exemplo `host.docker.internal:9090` quando configurado:
+Na VM do curso, o Prometheus e o Grafana rodam no mesmo container, então `localhost:9090` está correto. Se o Grafana estiver em **outro** container (por exemplo, na variante com Docker na sua máquina), `localhost` dentro dele aponta para o próprio container. Nesse caso, use um endereço acessível ao container, por exemplo `host.docker.internal:9090` quando configurado:
 
 ```bash
 bash scripts/configure_grafana.sh --prometheus-url http://host.docker.internal:9090

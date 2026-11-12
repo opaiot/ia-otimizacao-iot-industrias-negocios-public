@@ -177,7 +177,7 @@ curl -s -u admin:admin 'http://localhost:3000/api/datasources/proxy/uid/<uid-do-
 
 Se o endereço no navegador não abrir, confira se o `XXX` está certo e se o serviço responde por dentro da VM (`curl http://localhost:9090/-/ready` e `curl http://localhost:3000/api/health`). Se responde por dentro e não abre por fora, avise os monitores.
 
-Quem preferir ver os dashboards em um Grafana na própria máquina pode usar as alternativas com Docker que cada aula descreve (Aula 1: [docker/](Aula_1_datasets/docker/README.md); Aula 2: [Docker local](Aula_2_series_temporais/README.md#opção-2---docker-local); Aula 3: [docker/](Aula_3_kafka/docker/README.md)). Elas não são necessárias para seguir os roteiros da VM.
+Quem preferir ver os dashboards em um Grafana na própria máquina pode usar as alternativas com Docker que cada aula descreve (Aula 1: [docker/](Aula_1_datasets/docker/README.md); Aula 2: [Docker local](Aula_2_series_temporais/README.md#opção-2---docker-local), cujo datasource vem apontando para o Prometheus de uma VM dos monitores; Aula 3: [docker/](Aula_3_kafka/docker/README.md)). Elas não são necessárias para seguir os roteiros da VM.
 
 ## 6. Limites de memória e de processos
 

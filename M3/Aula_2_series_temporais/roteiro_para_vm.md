@@ -1,44 +1,41 @@
 # Aula 2 - Séries Temporais com Grafana na VM
 
-Esta prática configura o Grafana da VM para consultar séries temporais armazenadas no Prometheus. O roteiro é feito por linha de comando e assume que os serviços já estão disponíveis na VM do curso.
+Esta prática configura o Grafana da VM para consultar séries temporais armazenadas no Prometheus. O roteiro é feito por linha de comando e assume que o Prometheus e o Grafana já estão em execução na VM do curso: o próprio ambiente os inicia.
 
-Este passo a passo **não usa Docker**.
+Este passo a passo **não usa Docker nem `systemd`**: a VM é um container Ubuntu, e os dois serviços rodam como `root` desde que o container sobe. Antes de começar, leia o [guia do ambiente da VM](../ambiente_vm.md), que explica o acesso por SSH, os limites do container e como recarregar a configuração dos serviços.
 
 ## 1. Acessar a VM pelo Windows
 
-No PowerShell, defina o usuário e o endereço da VM:
+No PowerShell, defina o usuário e a porta (recebidos por e-mail do curso, a porta é diferente para cada aluno) e o endereço da VM:
 
 ```powershell
-$VM_USER = "ubuntu"
-$VM_HOST = "192.168.0.10"
+$VM_USER = "opaiotNNN"      # usuário do e-mail
+$VM_HOST = "andromeda.lasdpc.icmc.usp.br"
+$VM_PORT = "PORTA"          # porta do e-mail
 ```
 
-Acesse:
+Acesse e informe a senha recebida por e-mail:
 
 ```powershell
-ssh "${VM_USER}@${VM_HOST}"
+ssh -p $VM_PORT "${VM_USER}@${VM_HOST}"
 ```
 
-Se a VM usa chave SSH:
-
-```powershell
-ssh -i "$env:USERPROFILE\.ssh\id_ed25519" "${VM_USER}@${VM_HOST}"
-```
+O acesso é só por login interativo. `scp`, `sftp`, `ssh ... comando` e túneis de porta (`ssh -L`) são bloqueados nesta VM.
 
 ## 2. Entrar no diretório da prática
 
 Na VM:
 
 ```bash
-cd ~/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_2_series_temporais
+cd ~/workspace/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_2_series_temporais
 ```
 
-Se o repositório ainda não estiver na VM:
+Se o repositório ainda não estiver na VM, clone-o dentro de `~/workspace`, a pasta preservada pelo ambiente:
 
 ```bash
-cd ~
+cd ~/workspace
 git clone https://github.com/opaiot/ia-otimizacao-iot-industrias-negocios-public.git
-cd ~/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_2_series_temporais
+cd ~/workspace/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_2_series_temporais
 ```
 
 ## 3. Verificar o Prometheus
@@ -49,62 +46,45 @@ Confirme que o comando está disponível:
 prometheus --version
 ```
 
-Teste se o Prometheus já está respondendo:
+Teste se o Prometheus está respondendo:
 
 ```bash
 curl http://localhost:9090/-/healthy
 ```
 
-Consulte os targets:
+Consulte os targets e o estado deles:
 
 ```bash
-curl "http://localhost:9090/api/v1/query?query=up"
+curl -s "http://localhost:9090/api/v1/query?query=up" | jq -c '.data.result[] | {job: .metric.job, valor: .value[1]}'
 ```
 
-No navegador, a página de targets será:
-
-```text
-http://localhost:9090/targets
-```
-
-Se o Prometheus estiver instalado, mas não estiver rodando, inicie manualmente:
-
-```bash
-pkill -f '(^|/)prometheus([[:space:]]|$)' || true
-nohup prometheus \
-  --config.file=/etc/prometheus/prometheus.yml \
-  --storage.tsdb.path=/var/lib/prometheus \
-  --web.listen-address=0.0.0.0:9090 \
-  > prometheus.log 2>&1 &
-```
-
-Teste novamente:
-
-```bash
-curl http://localhost:9090/-/healthy
-```
+O Prometheus é iniciado pelo ambiente, como `root`. Se ele não responder, confira `tail /var/log/opaiot/prometheus.log` e, se for o caso, reinicie-o com `sudo` conforme a [seção 4.3 do guia da VM](../ambiente_vm.md#43-reiniciar-o-prometheus-ou-o-grafana-quando-for-realmente-necessário) (ou avise os monitores). Sem `sudo`, `nohup prometheus ...` e `pkill` falham por falta de permissão, e `systemctl` não existe nesta VM.
 
 ## 4. Configurar o datasource do Grafana
 
-Crie o arquivo de provisioning:
+O Grafana desta VM lê os arquivos de provisioning de `/usr/share/grafana/conf/provisioning/`, e **não** de `/etc/grafana/provisioning/` (um arquivo gravado lá é ignorado, sem aviso). Para conferir:
 
 ```bash
-sudo mkdir -p /etc/grafana/provisioning/datasources
+curl -s -u admin:admin http://localhost:3000/api/admin/settings | jq -r '.paths.provisioning'
 ```
 
-Se já existir uma configuração anterior da prática, faça backup:
+A resposta `conf/provisioning` é relativa a `/usr/share/grafana`.
+
+Defina o diretório e, se já existir uma configuração anterior da prática, faça backup dela:
 
 ```bash
-if [ -f /etc/grafana/provisioning/datasources/opaiot-aula2-prometheus.yml ]; then
-  sudo cp /etc/grafana/provisioning/datasources/opaiot-aula2-prometheus.yml \
-    "/etc/grafana/provisioning/datasources/opaiot-aula2-prometheus.yml.bak.$(date +%Y%m%d%H%M%S)"
+PROVISIONING_DIR=/usr/share/grafana/conf/provisioning
+
+if [ -f "$PROVISIONING_DIR/datasources/opaiot-aula2-prometheus.yml" ]; then
+  sudo cp "$PROVISIONING_DIR/datasources/opaiot-aula2-prometheus.yml" \
+    "$PROVISIONING_DIR/datasources/opaiot-aula2-prometheus.yml.bak.$(date +%Y%m%d%H%M%S)"
 fi
 ```
 
 Grave o datasource apontando para o Prometheus da própria VM:
 
 ```bash
-sudo tee /etc/grafana/provisioning/datasources/opaiot-aula2-prometheus.yml >/dev/null <<'EOF'
+sudo tee "$PROVISIONING_DIR/datasources/opaiot-aula2-prometheus.yml" >/dev/null <<'EOF'
 apiVersion: 1
 
 datasources:
@@ -123,37 +103,34 @@ EOF
 Confira:
 
 ```bash
-sudo cat /etc/grafana/provisioning/datasources/opaiot-aula2-prometheus.yml
+cat "$PROVISIONING_DIR/datasources/opaiot-aula2-prometheus.yml"
 ```
 
-## 5. Iniciar ou reiniciar o Grafana
+## 5. Carregar o datasource no Grafana
 
-Tente primeiro com `systemd`:
+O Grafana lê os arquivos de provisioning quando inicia, mas **não é preciso reiniciá-lo** (e não é possível com `sudo systemctl restart grafana-server`: a VM não tem `systemd` e o comando responde `System has not been booted with systemd as init system`). Peça que ele releia os datasources pela API de administração:
 
 ```bash
-sudo systemctl restart grafana-server
-sudo systemctl status grafana-server --no-pager
+GRAFANA_USER=admin
+GRAFANA_PASSWORD=admin
+
+curl -fsS -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+  -X POST http://localhost:3000/api/admin/provisioning/datasources/reload
 ```
 
-Se a VM não usa `systemd` para o Grafana, inicie manualmente:
-
-```bash
-pkill -f grafana-server || true
-nohup grafana-server \
-  --homepath=/usr/share/grafana \
-  --config=/etc/grafana/grafana.ini \
-  > grafana.log 2>&1 &
-```
-
-Verifique a API do Grafana:
+A resposta esperada é `{"message":"Datasources config reloaded"}`. Verifique a API do Grafana e o datasource:
 
 ```bash
 curl http://localhost:3000/api/health
+curl -s -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" http://localhost:3000/api/datasources | jq -c '.[] | {name, uid, type, url, isDefault}'
+curl -s -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" http://localhost:3000/api/datasources/uid/prometheus-aula2/health | jq -c .
 ```
+
+O último comando deve responder com `"status":"OK"` e a mensagem `Successfully queried the Prometheus API.`
 
 ## 6. Criar um dashboard básico pela API
 
-Use as credenciais padrão do Grafana:
+Use as credenciais padrão do Grafana (as mesmas variáveis do passo anterior):
 
 ```bash
 GRAFANA_USER=admin
@@ -283,26 +260,28 @@ curl -fsS \
   http://localhost:3000/api/dashboards/db
 ```
 
-O dashboard ficará em:
+A resposta traz `"status":"success"`. Confira que o dashboard existe e tem os 4 painéis:
 
-```text
-http://localhost:3000/d/opaiot-aula2-series
+```bash
+curl -s -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" http://localhost:3000/api/dashboards/uid/opaiot-aula2-series | jq -c '{titulo: .dashboard.title, paineis: (.dashboard.panels | length)}'
 ```
 
-## 7. Acessar Grafana e Prometheus pelo Windows
-
-Abra outro PowerShell e mantenha o túnel SSH ativo:
-
-```powershell
-ssh -L 3000:localhost:3000 -L 9090:localhost:9090 "${VM_USER}@${VM_HOST}"
-```
-
-Depois acesse:
+O dashboard ficará neste endereço, que você abre no navegador do seu computador (troque `XXX` pelos três dígitos do seu usuário `opaiotXXX`):
 
 ```text
-Grafana:    http://localhost:3000
-Prometheus: http://localhost:9090
-Dashboard:  http://localhost:3000/d/opaiot-aula2-series
+http://andromeda.lasdpc.icmc.usp.br:13XXX/d/opaiot-aula2-series
+```
+
+Dentro da VM, o mesmo dashboard responde em `http://localhost:3000/d/opaiot-aula2-series`.
+
+## 7. Acessar o Grafana e o Prometheus pelo navegador
+
+O Grafana e o Prometheus da sua VM abrem no navegador do seu computador, sem túnel SSH. Troque `XXX` pelos três dígitos do usuário `opaiotXXX` que você recebeu por e-mail (por exemplo, `opaiot001` usa as portas `13001` e `19001`):
+
+```text
+Grafana:    http://andromeda.lasdpc.icmc.usp.br:13XXX
+Prometheus: http://andromeda.lasdpc.icmc.usp.br:19XXX
+Dashboard:  http://andromeda.lasdpc.icmc.usp.br:13XXX/d/opaiot-aula2-series
 ```
 
 Credenciais padrão do Grafana:
@@ -312,9 +291,30 @@ usuário: admin
 senha: admin
 ```
 
+Dentro do Grafana, o datasource `Prometheus - Aula 2` continua apontando para `http://localhost:9090`, como você configurou no passo 4: o Grafana roda dentro da VM e enxerga o Prometheus por esse endereço. Não troque a URL do datasource pelo endereço `:19XXX`, que serve só para o seu navegador.
+
+### Pela linha de comando
+
+Os mesmos dados podem ser consultados de dentro da sessão SSH, passando pelo datasource que você criou, o que também confirma que o caminho Grafana → Prometheus funciona:
+
+```bash
+curl -s -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+  'http://localhost:3000/api/datasources/proxy/uid/prometheus-aula2/api/v1/query?query=up' \
+  | jq -c '.data.result[] | {job: .metric.job, valor: .value[1]}'
+```
+
+Para consultas com caracteres especiais, como colchetes, deixe o `curl` codificar a expressão:
+
+```bash
+curl -s -G -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+  --data-urlencode 'query=rate(prometheus_http_requests_total[5m])' \
+  http://localhost:3000/api/datasources/proxy/uid/prometheus-aula2/api/v1/query \
+  | jq -c '.data.result[] | {handler: .metric.handler, taxa: .value[1]}'
+```
+
 ## 8. Consultas PromQL para testar
 
-No Grafana, abra `Explore`, selecione `Prometheus - Aula 2` e teste:
+Estas expressões podem ser usadas em um painel, no `Explore` do Grafana (selecione `Prometheus - Aula 2`) ou pela API, como no passo anterior:
 
 ```promql
 up
@@ -324,23 +324,18 @@ rate(prometheus_http_requests_total[5m])
 process_resident_memory_bytes
 ```
 
-## 9. Encerrar processos iniciados manualmente
+## 9. Ao terminar
 
-Se você iniciou Prometheus ou Grafana manualmente com `nohup`, encerre com:
-
-```bash
-pkill -f '(^|/)prometheus([[:space:]]|$)' || true
-pkill -f grafana-server || true
-```
-
-Se o Grafana já estava rodando como serviço da VM, não é necessário pará-lo ao final da prática.
+Não há processos para encerrar: o Prometheus e o Grafana continuam rodando como serviços do ambiente e não precisam ser parados. O arquivo de provisioning e o dashboard podem ficar; eles não atrapalham as próximas aulas.
 
 ## 10. Problemas comuns
 
-Se `curl http://localhost:9090/-/healthy` falhar, o Prometheus não está rodando ou está usando outra porta.
+Se `curl http://localhost:9090/-/healthy` falhar, o Prometheus não está respondendo. Confira `tail /var/log/opaiot/prometheus.log` e reinicie-o com `sudo` conforme a [seção 4.3 do guia da VM](../ambiente_vm.md#43-reiniciar-o-prometheus-ou-o-grafana-quando-for-realmente-necessário); se continuar fora do ar, avise os monitores.
 
-Se `curl http://localhost:3000/api/health` falhar, o Grafana não está rodando ou está usando outra porta.
+Se `curl http://localhost:3000/api/health` falhar, o Grafana não está respondendo. Confira `tail /var/log/opaiot/grafana.log` e reinicie-o com `sudo` conforme a [seção 4.3 do guia da VM](../ambiente_vm.md#43-reiniciar-o-prometheus-ou-o-grafana-quando-for-realmente-necessário); se continuar fora do ar, avise os monitores.
 
-Se o Grafana abrir, mas o datasource não aparecer, reinicie o Grafana depois de criar o arquivo em `/etc/grafana/provisioning/datasources/`.
+Se o datasource não aparecer na lista depois do `reload`, confirme que o arquivo está em `/usr/share/grafana/conf/provisioning/datasources/` (e não em `/etc/grafana/provisioning/`) e que o YAML está correto, com a mesma indentação do exemplo. Depois rode o `reload` de novo.
+
+Se o endereço `http://andromeda.lasdpc.icmc.usp.br:13XXX` (Grafana) ou `:19XXX` (Prometheus) não abrir no navegador, confira se o `XXX` corresponde ao seu usuário e se o serviço responde por dentro da VM (`curl http://localhost:3000/api/health`). Se responde por dentro e não abre por fora, avise os monitores. O túnel SSH (`ssh -L`) não funciona nesta VM e não é necessário.
 
 Se o login `admin/admin` não funcionar, a senha já foi alterada na VM. Use a senha definida anteriormente ou redefina conforme a política do ambiente.
