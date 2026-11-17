@@ -1,0 +1,105 @@
+{
+  "dashboard": {
+    "uid": "opaiot-aula2-series",
+    "title": "Aula 2 - Séries Temporais",
+    "timezone": "browser",
+    "schemaVersion": 39,
+    "version": 1,
+    "refresh": "5s",
+    "time": {
+      "from": "now-15m",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "type": "timeseries",
+        "title": "Targets UP",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus-aula2"
+        },
+        "targets": [
+          {
+            "expr": "up",
+            "legendFormat": "{{job}} {{instance}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "type": "timeseries",
+        "title": "Séries Ativas no Prometheus",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus-aula2"
+        },
+        "targets": [
+          {
+            "expr": "prometheus_tsdb_head_series",
+            "legendFormat": "head_series",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "type": "timeseries",
+        "title": "Amostras Coletadas por Scrape",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus-aula2"
+        },
+        "targets": [
+          {
+            "expr": "scrape_samples_scraped",
+            "legendFormat": "{{job}} {{instance}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        }
+      },
+      {
+        "id": 4,
+        "type": "timeseries",
+        "title": "Requisições HTTP do Prometheus",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus-aula2"
+        },
+        "targets": [
+          {
+            "expr": "rate(prometheus_http_requests_total[5m])",
+            "legendFormat": "{{handler}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 8
+        }
+      }
+    ]
+  },
+  "overwrite": true
+}

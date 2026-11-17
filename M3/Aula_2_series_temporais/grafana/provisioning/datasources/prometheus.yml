@@ -1,10 +1,12 @@
 apiVersion: 1
 
 datasources:
-  - name: Prometheus (Andromeda)
+  - name: Prometheus - Aula 2
+    uid: prometheus-aula2
     type: prometheus
     access: proxy
-    url: http://andromeda.lasdpc.icmc.usp.br:19201
+    # Grafana e Prometheus estão na mesma rede Docker; o nome do serviço é o endereço.
+    url: http://prometheus:9090
     isDefault: true
     editable: true
     jsonData:

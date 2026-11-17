@@ -1,104 +1,149 @@
 # Prática 2 - Séries Temporais com Grafana
 
-Esta aula usa o Grafana para visualizar séries temporais disponíveis em um Prometheus. Há duas formas de executar a prática:
+Esta aula usa o Grafana para explorar e visualizar séries temporais armazenadas em um Prometheus. A stack inteira roda localmente com Docker: o Prometheus coleta as próprias métricas, que servem de fonte de dados para a prática.
 
-| Ambiente | Quando usar | Entrada |
-| --- | --- | --- |
-| VM do curso | Caminho principal da prática. A VM é um container Ubuntu (sem Docker nem `systemd`) com Prometheus e Grafana já instalados e em execução. | [roteiro_para_vm.md](roteiro_para_vm.md) |
-| Docker local | Alternativa para máquina local ou outro ambiente com Docker. | [docker-compose.yml](docker-compose.yml) |
+## 1. Objetivo da prática
 
-## Opção 1 - VM do curso
+Ao final da prática, você deve conseguir:
 
-Na VM, siga o roteiro por linha de comando:
+- explicar o que é uma série temporal no modelo do Prometheus (métrica + labels + amostras no tempo);
+- distinguir consultas instantâneas de consultas de intervalo e usar `rate()` sobre contadores;
+- conectar o Grafana a um Prometheus por meio de um datasource (provisionado por arquivo);
+- criar um dashboard de quatro painéis pela API do Grafana e explorar os mesmos dados pelo `Explore`.
 
-```text
-roteiro_para_vm.md
-```
+## 2. Conceitos da prática
 
-Esse guia mostra como:
+**Série temporal.** No Prometheus, cada combinação de nome de métrica e conjunto de labels identifica uma série: uma sequência de pares (timestamp, valor) coletados a cada *scrape*. `prometheus_http_requests_total{handler="/api/v1/query"}` é uma série; mudar o `handler` muda a série.
 
-- acessar a VM por SSH (usuário, porta e senha recebidos por e-mail; só login interativo);
-- verificar o Prometheus, que já está em execução;
-- configurar o datasource do Grafana pelo diretório de provisioning que o Grafana da VM realmente lê;
-- carregar o datasource sem reiniciar o Grafana;
-- criar um dashboard básico pela API;
-- acessar o Grafana e o Prometheus da sua VM pelo navegador (portas `13XXX` e `19XXX`, onde `XXX` são os três dígitos do seu usuário) e consultar os dados pela linha de comando.
+**Tipos de métrica.** Um **gauge** (como `prometheus_tsdb_head_series`) sobe e desce e pode ser lido diretamente. Um **counter** (como `prometheus_http_requests_total`) só cresce; o valor absoluto diz pouco, e o interessante é a taxa de variação: `rate(contador[5m])`.
 
-Acesse o guia completo em [roteiro_para_vm.md](roteiro_para_vm.md). Para entender o ambiente (container sem `systemd`, limites de memória e de processos), veja o [guia da VM](../ambiente_vm.md).
+**Fonte de dados da prática.** Não há exportador externo: o Prometheus coleta a si mesmo (job `prometheus`, configurado em [prometheus/prometheus.yml](prometheus/prometheus.yml)). As métricas internas dele — targets no ar, séries ativas, amostras por scrape, requisições HTTP — são séries temporais reais que se movimentam sozinhas, o que basta para estudar visualização.
 
-## Opção 2 - Docker local
+**Datasource e provisioning.** O Grafana não armazena as séries: a cada consulta ele pergunta ao Prometheus. A conexão é um *datasource*, que nesta aula vem **provisionado por arquivo** ([grafana/provisioning/datasources/prometheus.yml](grafana/provisioning/datasources/prometheus.yml)): configuração declarada em arquivo versionado, em vez de criada à mão na interface. Como Grafana e Prometheus estão na mesma rede Docker, a URL do datasource é `http://prometheus:9090` — o nome do serviço, não `localhost`.
 
-Use esta opção somente em uma máquina onde Docker esteja disponível.
+**Dashboard pela API.** Um dashboard do Grafana é um documento JSON (painéis, consultas, posições). A prática importa [dashboard/aula2-series-temporais-dashboard.json](dashboard/aula2-series-temporais-dashboard.json) pela API HTTP, o mesmo mecanismo que ferramentas de automação usam.
 
-Entre no diretório da aula:
+## 3. Prática passo a passo
+
+Pré-requisitos: Docker com Docker Compose v2 e Git. As portas `9090` e `3000` precisam estar livres (pare outras práticas do módulo antes).
+
+### 3.1. Subir a stack
 
 ```bash
 cd M3/Aula_2_series_temporais
-```
-
-Suba o Grafana:
-
-```bash
 docker compose up -d
-```
-
-Verifique:
-
-```bash
 docker compose ps
 ```
 
-Acesse:
+Os serviços `aula2_prometheus` e `aula2_grafana` devem aparecer como `running`.
 
-```text
-http://localhost:3000
+### 3.2. Verificar o Prometheus
+
+```bash
+curl http://localhost:9090/-/healthy
 ```
 
-Credenciais padrão:
+A resposta esperada é `Prometheus Server is Healthy.`. Veja os targets e o estado deles:
 
-```text
-usuário: admin
-senha: admin
+```bash
+curl -s "http://localhost:9090/api/v1/query?query=up" | jq -c '.data.result[] | {job: .metric.job, valor: .value[1]}'
 ```
 
-O datasource provisionado aponta para o Prometheus de uma **VM dos monitores do curso** (porta `19201`), e não para o Prometheus da sua VM:
+O job `prometheus` deve aparecer com valor `"1"`. No navegador, abra <http://localhost:9090/targets> e depois <http://localhost:9090/graph>, onde você pode executar as consultas da seção 3.6.
 
-```text
-http://andromeda.lasdpc.icmc.usp.br:19201
+> Sem `jq` instalado, remova o `| jq ...` dos comandos: a resposta vem em JSON puro.
+
+### 3.3. Verificar o datasource do Grafana
+
+O datasource `Prometheus - Aula 2` já foi provisionado pelo arquivo em `grafana/provisioning/datasources/`. Confirme pela API:
+
+```bash
+curl http://localhost:3000/api/health
+curl -s -u admin:admin http://localhost:3000/api/datasources | jq -c '.[] | {name, uid, type, url, isDefault}'
+curl -s -u admin:admin http://localhost:3000/api/datasources/uid/prometheus-aula2/health | jq -c .
 ```
 
-Esse endereço depende da VM dos monitores estar no ar. Para testar, rode `curl http://andromeda.lasdpc.icmc.usp.br:19201/-/healthy`: a resposta esperada é `Prometheus Server is Healthy.` Se não responder, o Grafana abre normalmente, mas o datasource mostra erro; avise os monitores.
+O último comando deve responder `"status":"OK"` com a mensagem `Successfully queried the Prometheus API.`.
 
-Para ver, nesse Grafana local, os dados da **sua própria VM** (por exemplo, os jobs que você configurou nas Aulas 1 e 3), troque a `url` do datasource por `http://andromeda.lasdpc.icmc.usp.br:19XXX`, onde `XXX` são os três dígitos do seu usuário `opaiotXXX`, e reinicie o Grafana local com `docker compose restart grafana`.
+### 3.4. Criar o dashboard pela API
 
-Essa configuração está em:
+Importe o JSON versionado na pasta `dashboard/`:
 
-```text
-grafana/provisioning/datasources/prometheus.yml
+```bash
+curl -fsS -u admin:admin \
+  -H "Content-Type: application/json" \
+  -X POST \
+  --data-binary @dashboard/aula2-series-temporais-dashboard.json \
+  http://localhost:3000/api/dashboards/db
 ```
 
-Para testar no Grafana, abra `Explore` e execute:
+A resposta traz `"status":"success"`. Confira que o dashboard existe e tem 4 painéis:
+
+```bash
+curl -s -u admin:admin http://localhost:3000/api/dashboards/uid/opaiot-aula2-series | jq -c '{titulo: .dashboard.title, paineis: (.dashboard.panels | length)}'
+```
+
+### 3.5. Explorar o dashboard no navegador
+
+Abra <http://localhost:3000/d/opaiot-aula2-series> (usuário `admin`, senha `admin`; se o Grafana pedir para trocar a senha, pode clicar em **Skip**).
+
+Observe os quatro painéis e identifique em cada um:
+
+- **Targets UP**: uma série constante em 1 — o que aconteceria se o Prometheus caísse?
+- **Séries Ativas no Prometheus**: um gauge; repare que ele cresce um pouco conforme o próprio Prometheus cria séries novas;
+- **Amostras Coletadas por Scrape**: quantas séries cada coleta traz;
+- **Requisições HTTP do Prometheus**: um `rate()` sobre counter — cada consulta sua pela API ou pelo navegador movimenta este painel.
+
+Mude o intervalo de tempo (canto superior direito) de 15 minutos para 1 hora e observe o efeito na resolução dos gráficos.
+
+### 3.6. Consultas no Explore
+
+Abra **Explore** no menu lateral, selecione `Prometheus - Aula 2` e teste:
 
 ```promql
 up
+prometheus_tsdb_head_series
+scrape_samples_scraped
+rate(prometheus_http_requests_total[5m])
+process_resident_memory_bytes
 ```
 
-## Parar o Docker local
+Compare `prometheus_http_requests_total` (counter cru, só cresce) com a versão em `rate()`. As mesmas consultas funcionam pela API, passando pelo datasource do Grafana — o que confirma o caminho Grafana → Prometheus:
 
 ```bash
-docker compose down
+curl -s -G -u admin:admin \
+  --data-urlencode 'query=rate(prometheus_http_requests_total[5m])' \
+  http://localhost:3000/api/datasources/proxy/uid/prometheus-aula2/api/v1/query \
+  | jq -c '.data.result[] | {handler: .metric.handler, taxa: .value[1]}'
 ```
 
-Para remover também o volume do Grafana:
+### 3.7. Encerrar
 
 ```bash
-docker compose down -v
+docker compose down        # para os containers
+docker compose down -v     # remove também os volumes (histórico do Prometheus e ajustes do Grafana)
 ```
+
+### Problemas comuns
+
+- `curl http://localhost:9090/-/healthy` falha: o container não subiu; veja `docker compose logs prometheus`.
+- O datasource não aparece: confira `docker compose logs grafana` e se o arquivo em `grafana/provisioning/datasources/` está com a indentação correta.
+- Comandos `curl` com `401`: a senha do `admin` foi trocada; use `-u admin:<nova-senha>`.
+- Porta `9090` ou `3000` ocupada: pare a outra prática que estiver usando a porta ou ajuste o mapeamento no [docker-compose.yml](docker-compose.yml).
+
+## 4. Sugestão de exercícios sobre a prática
+
+1. **Instantâneo x intervalo.** No Explore, execute `prometheus_http_requests_total` e depois `prometheus_http_requests_total[1m]` (modo *Instant*). O que cada resultado representa? Por que a segunda forma não pode ser plotada diretamente como gráfico?
+2. **Janela do `rate()`.** Duplique o painel "Requisições HTTP do Prometheus" e troque `[5m]` por `[30s]` e por `[15m]`. Compare a suavidade e o atraso das três curvas. Que relação a janela precisa ter com o `scrape_interval` de 5s?
+3. **Painel novo.** Adicione ao dashboard um painel com o consumo de memória do Prometheus (`process_resident_memory_bytes`), com a unidade configurada para *bytes (IEC)*. Faça pela interface e depois exporte o JSON do dashboard (menu **Share > Export**) para comparar com o arquivo da pasta `dashboard/`.
+4. **Gerar carga.** Rode em um terminal `while true; do curl -s http://localhost:9090/api/v1/query?query=up > /dev/null; sleep 0.2; done` por um minuto e observe o efeito no painel de requisições HTTP. Interrompa com `Ctrl+C` e veja quanto tempo a curva demora para voltar ao normal.
+5. **Fonte externa.** Suba também a stack da [Aula 1](../Aula_1_datasets/README.md) e acrescente ao Prometheus desta aula um job que colete `host.docker.internal:8000` (veja `extra_hosts`/`host-gateway` em [../Aula_1_datasets/scripts/README.md](../Aula_1_datasets/scripts/README.md)). Crie um painel com `opaiot_iaq_sensor_value`.
 
 ## Arquivos da aula
 
 | Arquivo | Descrição |
 | --- | --- |
-| [roteiro_para_vm.md](roteiro_para_vm.md) | Passo a passo completo para execução na VM, sem Docker. |
-| [docker-compose.yml](docker-compose.yml) | Sobe Grafana local em container. |
-| [grafana/provisioning/datasources/prometheus.yml](grafana/provisioning/datasources/prometheus.yml) | Datasource Prometheus provisionado para o Grafana em Docker. |
+| [docker-compose.yml](docker-compose.yml) | Sobe Prometheus e Grafana locais em containers. |
+| [prometheus/prometheus.yml](prometheus/prometheus.yml) | Prometheus coletando as próprias métricas (job `prometheus`). |
+| [grafana/provisioning/datasources/prometheus.yml](grafana/provisioning/datasources/prometheus.yml) | Datasource provisionado apontando para `http://prometheus:9090`. |
+| [dashboard/aula2-series-temporais-dashboard.json](dashboard/aula2-series-temporais-dashboard.json) | Dashboard de 4 painéis importado pela API na prática. |

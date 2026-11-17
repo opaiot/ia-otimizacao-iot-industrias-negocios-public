@@ -1,4 +1,27 @@
+# Sobe a dupla Prometheus + Grafana da Aula 2 (séries temporais).
+# O Prometheus coleta as próprias métricas (job "prometheus"), que servem de
+# fonte de séries temporais para os painéis construídos na prática.
+#
+# Uso (a partir desta pasta):
+#   docker compose up -d
+#
+# Endpoints:
+#   Prometheus : http://localhost:9090
+#   Grafana    : http://localhost:3000  (admin/admin)
+
+name: opaiot-aula2
+
 services:
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: aula2_prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+
   grafana:
     image: grafana/grafana:10.4.0
     container_name: aula2_grafana
@@ -13,6 +36,9 @@ services:
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning
       - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
 
 volumes:
+  prometheus_data:
   grafana_data:

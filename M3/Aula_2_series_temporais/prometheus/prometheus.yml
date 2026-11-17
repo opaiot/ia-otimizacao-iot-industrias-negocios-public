@@ -1,0 +1,9 @@
+# O Prometheus coleta as próprias métricas: é a fonte de séries temporais da
+# prática, sem depender de nenhum exportador externo.
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
