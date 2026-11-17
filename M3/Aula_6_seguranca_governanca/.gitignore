@@ -1,0 +1,6 @@
+# Artefatos gerados ao executar a prática, não versionados.
+mosquitto/config/passwd
+mosquitto/data/*.db
+mosquitto/log/*.log
+grafana/data/*
+!grafana/data/.gitkeep
