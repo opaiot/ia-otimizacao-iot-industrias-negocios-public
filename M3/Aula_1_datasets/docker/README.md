@@ -7,10 +7,10 @@ são usados **sem modificação**.
 > Os scripts da prática usam **constantes** (`CSV_FILE`, `PORT`,
 > `INTERVAL_SECONDS`) em vez de variáveis de ambiente. Por isso a imagem
 > preserva a estrutura de pastas da aula (`scripts/` ao lado de `data/`) e o
-> exportador roda de dentro de `scripts/`, exatamente como na VM.
+> exportador roda de dentro de `scripts/`.
 >
-> O fluxo de VM descrito em [`../README.md`](../README.md) continua válido. Esta
-> pasta é uma alternativa para rodar tudo no Docker.
+> O roteiro da prática está em [`../README.md`](../README.md); esta página é a
+> referência da stack Docker.
 
 ## Topologia
 

@@ -17,6 +17,8 @@
 #   Grafana              : http://localhost:3000  (admin/admin)
 #   Dashboard            : http://localhost:3000/d/opaiot-iaq
 
+name: opaiot-aula1
+
 services:
   exporter:
     build:

@@ -1,5 +1,5 @@
 # Job opaiot_iaq apontando para o exportador na rede docker (exporter:8000),
-# equivalente ao target localhost:8000 usado no cenário de VM.
+# equivalente ao target localhost:8000 de uma execução dos scripts no host.
 global:
   scrape_interval: 5s
 
