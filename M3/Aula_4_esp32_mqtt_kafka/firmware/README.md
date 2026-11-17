@@ -23,7 +23,7 @@ Publica telemetria no broker MQTT no formato da Aula 3, pronta para o bridge `sc
 | DHT22 | GPIO 15 (temperatura e umidade) |
 | MQ-7 | GPIO 34 / AOUT (monóxido de carbono) |
 | Protocolo | MQTT (porta 1883) |
-| Tópico padrão | `opaiot/temperature` |
+| Tópico padrão | `opaiot/air_quality` |
 
 ## Payload MQTT
 
@@ -54,7 +54,7 @@ Edite as constantes no topo de [esp32_mq7_mqtt.ino](esp32_mq7_mqtt.ino):
 | `WIFI_SSID` | `Wokwi-GUEST` | SSID da sua rede |
 | `WIFI_PASS` | `""` | Senha do WiFi |
 | `MQTT_SERVER` | IP do host na rede local | IP do PC/servidor com Mosquitto |
-| `MQTT_TOPIC` | `opaiot/temperature` | Igual ao `MQTT_TOPIC` do bridge Python |
+| `MQTT_TOPIC` | `opaiot/air_quality` | Igual ao `MQTT_TOPIC` do bridge Python |
 | `SENSOR_ID` | `sensor-01` | Identificador do sensor |
 | `ROOM` | `lab-01` | Sala ou ambiente |
 | `DHT_PIN` | `15` | GPIO do DHT22 |
