@@ -2,7 +2,7 @@
 
 Este roteiro executa no Kubernetes a mesma stack IoT da [prática com Docker Compose](docker-compose-pratica.md) e usa a comparação entre as duas para apresentar os conceitos centrais do Kubernetes. Os manifests estão em [`k8s/`](../k8s/), e o [README dos manifests](../k8s/README.md) resume o que cada arquivo contém.
 
-> **Onde rodar:** a VM do curso não tem Docker nem `kubectl`, então esta prática roda **na sua máquina** (Docker Desktop, Minikube ou K3s) ou em um **playground online**. Veja o [passo 3](#3-construir-as-imagens-dos-apps).
+> **Onde rodar:** esta prática roda **na sua máquina** (Docker Desktop, Minikube ou K3s) ou em um **playground online**. Veja o [passo 3](#3-construir-as-imagens-dos-apps).
 
 ## Objetivos
 

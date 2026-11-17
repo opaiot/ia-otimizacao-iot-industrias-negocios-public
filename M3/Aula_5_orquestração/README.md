@@ -1,20 +1,22 @@
 # Prática 5 - Orquestração com Docker Compose, Kubernetes e IoT
 
-Esta prática demonstra uma stack IoT local com Docker Compose e uma leitura equivalente, simplificada e didática, em Kubernetes.
+Esta prática sobe uma stack IoT completa com Docker Compose e depois executa a mesma stack, em leitura simplificada e didática, no Kubernetes. Tudo roda localmente: Docker para o Compose e um cluster local (Docker Desktop, Minikube ou K3s) ou playground online para o Kubernetes.
 
-## Objetivo
+## 1. Objetivo da prática
 
 Ao final da prática, você deve conseguir:
 
 - subir uma arquitetura IoT completa com Docker Compose;
-- observar mensagens passando de MQTT para Kafka;
-- consumir eventos Kafka com Python;
-- expor métricas Prometheus;
-- visualizar os dados no Grafana;
+- observar mensagens passando de MQTT para Kafka e eventos consumidos com Python;
+- expor métricas Prometheus e visualizar os dados no Grafana;
 - relacionar os mesmos componentes com Deployments, Services e ConfigMaps no Kubernetes;
 - observar no Kubernetes a escala de réplicas, a recriação de Pods (reconciliação) e a diferença entre mudanças imperativas e declarativas.
 
-## Arquitetura
+## 2. Conceitos da prática
+
+### Arquitetura
+
+A mesma cadeia é executada nas duas plataformas:
 
 ```text
 sensor-simulator
@@ -26,18 +28,25 @@ sensor-simulator
   -> Grafana
 ```
 
-O Kafka UI também é incluído no Docker Compose para inspecionar tópicos, mensagens e broker.
+O Kafka UI também é incluído para inspecionar tópicos, mensagens e broker.
 
-## Pré-requisitos
+### Orquestração
 
-- Docker 20.10.4 ou superior.
-- Docker Compose v2.
-- Navegador para Kafka UI, Prometheus e Grafana.
-- Para Kubernetes: `kubectl` e um cluster (Kubernetes do Docker Desktop, Minikube, K3s ou um playground online como o KillerCoda).
+O **Docker Compose** descreve e sobe um conjunto de containers em uma máquina: rede, volumes, ordem de subida (`depends_on`) e healthchecks. O **Kubernetes** generaliza a ideia para um cluster: você declara o estado desejado (Deployments, Services, ConfigMaps) e o cluster **reconcilia** o estado real com o declarado — recriando Pods que morrem, balanceando tráfego pelos Services e aplicando mudanças por rolling update. A tabela de equivalências Compose ↔ Kubernetes, conceito a conceito, está no [roteiro Kubernetes](docs/kubernetes-pratica.md#do-compose-para-o-kubernetes).
 
-> A VM do curso não tem Docker nem `kubectl`. Esta aula roda na sua máquina ou em um playground.
+### Imagens e serviços
 
-## Portas
+Os três serviços Python da stack são construídos a partir de [services/](services/):
+
+```text
+opaiot/sensor-simulator:local
+opaiot/mqtt-to-kafka:local
+opaiot/iot-processor:local
+```
+
+No Compose, o `build` acontece no `up`. No Kubernetes, você constrói as imagens e as disponibiliza ao cluster antes de aplicar os manifests — o [roteiro Kubernetes](docs/kubernetes-pratica.md#3-construir-as-imagens-dos-apps) traz os comandos para cada ambiente.
+
+### Portas (Docker Compose)
 
 | Serviço | Porta no host | Uso |
 | --- | --- | --- |
@@ -48,84 +57,41 @@ O Kafka UI também é incluído no Docker Compose para inspecionar tópicos, men
 | Prometheus | `9090` | consultas PromQL e targets |
 | Grafana | `3000` | dashboard IoT, `admin/admin` |
 
-No Docker Compose, use `kafka:9092` entre containers. Use `localhost:29092` para ferramentas Kafka executadas diretamente no host.
+No Docker Compose, use `kafka:9092` entre containers e `localhost:29092` para ferramentas no host. No Kubernetes, o acesso às interfaces é por `kubectl port-forward` (ou NodePorts `30080`/`30090`/`30300`).
 
-## Como subir com Docker Compose
+## 3. Prática passo a passo
 
-Entre no diretório da aula:
+A prática tem duas partes, cada uma com roteiro próprio e detalhado:
+
+1. **[Roteiro Docker Compose](docs/docker-compose-pratica.md)** — suba a stack, observe os logs de sensor, ponte e processador, teste MQTT e Kafka pelo terminal, explore Kafka UI, Prometheus e o dashboard do Grafana, escale o sensor e encerre.
+2. **[Roteiro Kubernetes](docs/kubernetes-pratica.md)** — execute a mesma stack em um cluster: conceitos (Deployment → ReplicaSet → Pod, labels, Services), construção das imagens por ambiente, aplicação dos manifests, verificação ponta a ponta, escala, reconciliação, imperativo x declarativo e remoção. Inclui diagnóstico e perguntas de verificação com gabarito.
+
+Início rápido da parte Compose:
 
 ```bash
 cd M3/Aula_5_orquestração
-```
-
-Suba a stack:
-
-```bash
 docker compose up --build -d
-```
-
-Acompanhe os logs principais:
-
-```bash
 docker compose logs -f --tail=50 sensor-simulator mqtt-to-kafka iot-processor
 ```
 
-## Como acessar
+Acessos: Kafka UI em <http://localhost:8080>, Prometheus em <http://localhost:9090>, Grafana em <http://localhost:3000> (`admin`/`admin`, dashboard em `/d/iot-local-telemetry`), métricas em <http://localhost:8000/metrics>.
 
-- Kafka UI: <http://localhost:8080>
-- Prometheus: <http://localhost:9090>
-- Prometheus targets: <http://localhost:9090/targets>
-- Grafana: <http://localhost:3000>
-- Dashboard Grafana: <http://localhost:3000/d/iot-local-telemetry>
-- Métricas do processador: <http://localhost:8000/metrics>
-
-Credenciais didáticas do Grafana:
-
-```text
-usuário: admin
-senha: admin
-```
-
-## Como encerrar
-
-Pare os containers mantendo volumes:
+Para encerrar:
 
 ```bash
-docker compose down
+docker compose down      # mantém volumes
+docker compose down -v   # remove volumes da prática
 ```
 
-Pare e remova volumes da prática:
+> Pare a stack do Compose antes de iniciar a parte Kubernetes: as duas usam as mesmas portas locais.
 
-```bash
-docker compose down -v
-```
+A pasta [k8s/](k8s/README.md) documenta cada manifest, as versões das imagens e as simplificações de laboratório (Kafka sem persistência, sem resources, senha em texto puro).
 
-## Kubernetes
+## 4. Sugestão de exercícios sobre a prática
 
-A pasta `k8s/` contém manifests simples para namespace, Deployments, Services, ConfigMaps, Prometheus, Grafana (com o mesmo dashboard do Compose) e Kafka UI. A stack inteira é aplicada com `kubectl apply -f k8s/`.
-
-Os três serviços Python usam imagens locais, que você constrói antes de aplicar os manifests:
-
-```text
-opaiot/sensor-simulator:local
-opaiot/mqtt-to-kafka:local
-opaiot/iot-processor:local
-```
-
-A forma de levar essas imagens ao cluster depende do ambiente (Docker Desktop, Minikube, K3s ou playground). O [roteiro Kubernetes](docs/kubernetes-pratica.md#3-construir-as-imagens-dos-apps) traz os comandos de cada um.
-
-## Roteiros
-
-- [Prática Docker Compose](docs/docker-compose-pratica.md)
-- [Prática Kubernetes](docs/kubernetes-pratica.md): roteiro completo, com objetivos, verificações e perguntas.
-- [Manifests Kubernetes](k8s/README.md): referência dos arquivos de `k8s/`, versões das imagens e simplificações do laboratório.
-
-## Progressão sugerida
-
-1. Rode a stack local com Docker Compose.
-2. Observe logs e mensagens MQTT.
-3. Inspecione tópicos e eventos no Kafka UI.
-4. Veja métricas em `/metrics` e no Prometheus.
-5. Abra o dashboard do Grafana.
-6. Leia os manifests Kubernetes comparando cada conceito com o Compose.
-7. Aplique a versão Kubernetes em playground ou cluster local.
+1. **Equivalências.** Para cada serviço do [docker-compose.yaml](docker-compose.yaml), aponte o recurso correspondente em [k8s/](k8s/) e o que **não** tem equivalente direto (por exemplo, `depends_on` e o job `kafka-init`). Use a tabela do roteiro Kubernetes como gabarito.
+2. **Escala nos dois mundos.** Escale o sensor para 3 réplicas no Compose (`docker compose up -d --scale sensor-simulator=3`) e no Kubernetes (`kubectl scale ... --replicas=3`). Compare: identidade de cada réplica, efeito na taxa de mensagens no Grafana e o que acontece com a escala após um novo `docker compose up` / `kubectl apply`.
+3. **Falha de um componente.** No Compose, `docker compose stop kafka` por 1 minuto e observe os logs da ponte e do processador; depois `start`. No Kubernetes, apague o Pod do Kafka. O que cada plataforma recupera sozinha, e o que se perde em cada caso (dica: volume nomeado x `emptyDir`)?
+4. **Declarativo.** No Kubernetes, faça a mudança de `PUBLISH_INTERVAL` editando o YAML e aplicando (passo 12 do roteiro). Depois responda: por que `kubectl set env` seria desfeito pelo próximo `kubectl apply -f k8s/`? Onde fica a "fonte da verdade" em cada plataforma?
+5. **Perguntas de verificação.** Responda às seis perguntas do fim do [roteiro Kubernetes](docs/kubernetes-pratica.md#perguntas-de-verificação) antes de abrir o gabarito.
+6. **Desafio.** Acrescente um segundo sensor **com Deployment próprio** no Kubernetes (por exemplo, `sensor-simulator-b` publicando em outro tópico MQTT) sem alterar os demais manifests. O que precisou mudar? O que o Service do Mosquitto garantiu de graça?
