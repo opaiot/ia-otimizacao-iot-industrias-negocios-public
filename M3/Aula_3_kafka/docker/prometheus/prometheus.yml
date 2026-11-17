@@ -1,11 +1,13 @@
-# Configuração equivalente à gerada por scripts/configure_prometheus.sh,
-# porém apontando para o serviço consumer da rede docker em vez de localhost.
+# O job descobre os consumers pelo DNS interno do Docker (dns_sd_configs):
+# o nome "consumer" resolve para TODAS as réplicas do serviço, então o
+# experimento de escala (--scale consumer=3) não exige mudar esta configuração.
 global:
   scrape_interval: 5s
 
 scrape_configs:
   - job_name: "iot-kafka-consumers"
     scrape_interval: 5s
-    static_configs:
-      - targets:
-          - "consumer:8000"
+    dns_sd_configs:
+      - names: ["consumer"]
+        type: A
+        port: 8000

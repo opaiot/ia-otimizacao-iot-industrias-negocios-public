@@ -5,7 +5,7 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Instala as dependências da prática (as mesmas usadas na VM).
+# Instala as dependências da prática.
 COPY scripts/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 

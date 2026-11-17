@@ -1,14 +1,6 @@
-# Aula 3 - Kafka IoT no Docker
+# Aula 3 - Stack Docker
 
-Esta pasta sobe a prática completa da Aula 3 em containers, sem necessidade de
-instalar Kafka, Prometheus ou Grafana na máquina. Os scripts Python da pasta
-[`../scripts`](../scripts) são usados **sem modificação**: toda a configuração é
-injetada por variáveis de ambiente que os próprios scripts já leem.
-
-> Os scripts de instalação na VM ([`../instalando_kafka_vm.md`](../instalando_kafka_vm.md),
-> [`../scripts/configure_prometheus.sh`](../scripts/configure_prometheus.sh) e
-> [`../scripts/configure_grafana.sh`](../scripts/configure_grafana.sh)) continuam
-> válidos para o cenário de VM. Esta pasta é uma alternativa para rodar tudo no Docker.
+Referência da stack que sobe a prática completa da Aula 3 em containers. O roteiro passo a passo, com os experimentos, está no [README da aula](../README.md). Os scripts Python da pasta [`../scripts`](../scripts) são usados **sem modificação**: toda a configuração é injetada por variáveis de ambiente que os próprios scripts já leem.
 
 ## Topologia
 
@@ -21,86 +13,35 @@ producer ──> kafka (KRaft) ──> consumer (/metrics:8000) ──> promethe
 | `kafka`      | Broker Kafka 4.x em modo KRaft (sem ZooKeeper)      | `29092`       |
 | `kafka-init` | Cria o tópico `iot.air_quality` com 3 partitions    | -             |
 | `producer`   | `scripts/producer.py` simulando sensores            | -             |
-| `consumer`   | `scripts/consumer_metrics.py` expondo `/metrics`    | `8000`        |
-| `prometheus` | Coleta as métricas do consumer                      | `9090`        |
+| `consumer`   | `scripts/consumer_metrics.py` expondo `/metrics`    | dinâmica (`docker compose port consumer 8000`) |
+| `prometheus` | Coleta as métricas dos consumers                    | `9090`        |
 | `grafana`    | Dashboard provisionado automaticamente              | `3000`        |
 
-## Como subir
+O serviço `consumer` não tem `container_name` nem porta fixa no host de propósito: assim ele pode ser escalado com `docker compose up -d --scale consumer=3`. O Prometheus descobre todas as réplicas pelo DNS interno do Docker (`dns_sd_configs` no [prometheus/prometheus.yml](prometheus/prometheus.yml)), então nenhuma configuração muda ao escalar.
+
+## Subir, parar e limpar
 
 A partir desta pasta (`M3/Aula_3_kafka/docker`):
 
 ```bash
-docker compose up --build
-```
-
-Para rodar em segundo plano:
-
-```bash
-docker compose up --build -d
+docker compose up --build -d   # sobe a stack
+docker compose down            # para os containers
+docker compose down -v         # para e remove os volumes (Kafka, Prometheus, Grafana)
 ```
 
 ## Endpoints
 
-- Métricas do consumer: <http://localhost:8000/metrics>
-- Prometheus: <http://localhost:9090> (página de targets em `/targets`)
+- Prometheus: <http://localhost:9090> (targets em `/targets`, job `iot-kafka-consumers`)
 - Grafana: <http://localhost:3000> (usuário `admin`, senha `admin`)
 - Dashboard: <http://localhost:3000/d/iot-kafka-telemetry>
+- Kafka a partir do host: `localhost:29092` (dentro da rede Docker, os serviços usam `kafka:9092`)
+- Métricas do consumer: porta dinâmica; descubra com `docker compose port consumer 8000`
 
-O data source `Prometheus - Kafka IoT` e o dashboard `Kafka IoT - Telemetria
-Observavel` já vêm provisionados (mesma configuração do
-[`configure_grafana.sh`](../scripts/configure_grafana.sh)).
-
-## Experimentos
-
-### Vários consumers no mesmo grupo
-
-Escale o serviço `consumer` para observar o rebalanceamento entre as 3 partitions:
-
-```bash
-docker compose up --build -d --scale consumer=3
-```
-
-> Ao escalar, remova o mapeamento fixo de porta `8000:8000` do serviço `consumer`
-> no [`docker-compose.yml`](docker-compose.yml) (ou troque por `"8000"` para porta
-> dinâmica), pois várias réplicas não podem publicar na mesma porta do host.
-> O Prometheus continua coletando todas as réplicas pelo nome do serviço.
-
-### Inspecionar o tópico e os grupos
-
-```bash
-docker compose exec kafka /opt/kafka/bin/kafka-topics.sh \
-  --describe --topic iot.air_quality --bootstrap-server kafka:9092
-
-docker compose exec kafka /opt/kafka/bin/kafka-consumer-groups.sh \
-  --describe --group air-quality-processors --bootstrap-server kafka:9092
-```
-
-### Parar e retomar o consumer (offset)
-
-```bash
-docker compose stop consumer
-# aguarde alguns segundos com o producer rodando
-docker compose start consumer
-```
-
-O consumer retoma a partir do offset salvo pelo grupo.
-
-### Acessar o Kafka a partir do host
-
-O listener externo está publicado em `localhost:29092`. Ferramentas no host podem
-apontar para esse endereço (dentro da rede docker, os serviços usam `kafka:9092`).
-
-## Parar e limpar
-
-```bash
-docker compose down          # para os containers
-docker compose down -v       # para e remove os volumes (Kafka, Prometheus, Grafana)
-```
+O data source `Prometheus - Kafka IoT` e o dashboard `Kafka IoT - Telemetria Observavel` vêm provisionados dos arquivos em [grafana/provisioning/](grafana/provisioning/).
 
 ## Configuração
 
-As variáveis de ambiente dos scripts podem ser ajustadas no
-[`docker-compose.yml`](docker-compose.yml):
+As variáveis de ambiente dos scripts podem ser ajustadas no [`docker-compose.yml`](docker-compose.yml):
 
 ```text
 KAFKA_BOOTSTRAP_SERVERS=kafka:9092
@@ -111,3 +52,5 @@ AUTO_OFFSET_RESET=earliest
 METRICS_PORT=8000
 CONSUMER_ID=consumer-docker
 ```
+
+A descrição de cada variável está em [../scripts/README.md](../scripts/README.md).

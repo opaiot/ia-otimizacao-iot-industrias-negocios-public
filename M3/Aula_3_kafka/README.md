@@ -1,27 +1,31 @@
 # Prática 3 - Apache Kafka para telemetria IoT observável
 
-Esta aula prática apresenta o Apache Kafka como infraestrutura para pipelines orientados a eventos em IoT. O cenário simula sensores ambientais enviando medições para um tópico Kafka, consumidores processando esses eventos e métricas sendo expostas para Prometheus e Grafana.
+Esta aula apresenta o Apache Kafka como infraestrutura para pipelines orientados a eventos em IoT. O cenário simula sensores ambientais enviando medições para um tópico Kafka, consumidores processando esses eventos e métricas sendo expostas para Prometheus e Grafana. Toda a prática roda localmente com Docker.
 
-Para execução com Docker veja [Aula_3_kafka](./docker/README.md).
+## 1. Objetivo da prática
 
-> **Na VM do curso**, leia antes o [guia do ambiente da VM](../ambiente_vm.md): ela é um container Ubuntu sem `systemd`, com 1 GiB de memória e limite de 256 processos/threads, e o Prometheus e o Grafana já estão em execução.
+Ao final da prática, você deve conseguir:
 
-## 1. Visão conceitual
+- explicar os conceitos centrais do Kafka: tópico, partition, offset, chave, consumer group e lag;
+- demonstrar que eventos com a mesma chave (`sensor_id`) caem na mesma partition, preservando a ordem por sensor;
+- observar o rebalanceamento quando consumers entram ou saem de um grupo;
+- mostrar que grupos diferentes leem o mesmo tópico de forma independente e que um consumer retoma do offset salvo;
+- acompanhar o pipeline por métricas no Prometheus e em um dashboard do Grafana.
+
+## 2. Conceitos da prática
 
 Kafka não deve ser entendido apenas como uma fila de mensagens. Nesta prática, ele aparece como um **log distribuído de eventos**, em que producers publicam eventos em tópicos, tópicos são divididos em partitions e consumers leem esses eventos mantendo offsets.
 
-Os conceitos principais são:
-
-- **Producer**: aplicação que publica eventos no Kafka. Na prática, é um script Python que simula sensores.
-- **Event**: uma medição IoT enviada como mensagem, contendo sensor, sala, temperatura, umidade, CO2 e timestamp.
+- **Producer**: aplicação que publica eventos no Kafka. Aqui, o script [`scripts/producer.py`](scripts/producer.py), que simula 5 sensores.
+- **Event**: uma medição IoT enviada como mensagem: sensor, sala, temperatura, umidade, CO2 e timestamp.
 - **Topic**: canal lógico onde os eventos são publicados. A prática usa `iot.air_quality`.
 - **Key**: valor usado para distribuir eventos entre partitions. A prática usa `sensor_id`.
 - **Partition**: segmento ordenado do log. A ordem é garantida dentro de uma partition.
 - **Offset**: posição de uma mensagem dentro de uma partition.
-- **Consumer**: aplicação que lê eventos do Kafka.
+- **Consumer**: aplicação que lê eventos. Aqui, [`scripts/consumer_metrics.py`](scripts/consumer_metrics.py), que também expõe métricas em `/metrics`.
 - **Consumer group**: conjunto de consumers que divide as partitions entre si.
 - **Lag**: diferença entre o fim do log e o ponto já consumido por um grupo.
-- **Observabilidade**: métricas expostas pelo consumer em `/metrics`, coletadas pelo Prometheus e visualizadas no Grafana.
+- **Observabilidade**: métricas do consumer coletadas pelo Prometheus e visualizadas no Grafana.
 
 Topologia conceitual da prática:
 
@@ -76,239 +80,167 @@ flowchart LR
     PR --> G
 ```
 
-O ponto didático central é observar que eventos do mesmo sensor tendem a permanecer na mesma partition quando `sensor_id` é usado como chave. Isso preserva a ordem das leituras daquele sensor dentro da partition e permite discutir paralelismo, offset, lag e retomada de consumo.
-
-## 2. Resumo da prática
+O ponto didático central é observar que eventos do mesmo sensor permanecem na mesma partition quando `sensor_id` é usado como chave. Isso preserva a ordem das leituras daquele sensor e permite discutir paralelismo, offset, lag e retomada de consumo.
 
 ### Estrutura da aula
 
-Arquivos principais:
-
 ```text
 Aula_3_kafka/
-├── README.md
-├── instalando_kafka_vm.md
+├── README.md             <- este roteiro
+├── docker/               <- stack Docker: Kafka, producer, consumer, Prometheus, Grafana
+│   └── README.md         <- referência da stack (serviços, portas, configuração)
 └── scripts/
-    ├── README.md
+    ├── README.md         <- referência dos scripts e execução fora do Docker
     ├── producer.py
     ├── consumer_metrics.py
-    ├── configure_prometheus.sh
-    ├── configure_grafana.sh
     └── requirements.txt
 ```
 
-Use estes materiais nesta ordem:
+## 3. Prática passo a passo
 
-1. [`instalando_kafka_vm.md`](instalando_kafka_vm.md): instalação do Kafka na VM.
-2. `scripts/README.md`: passo a passo detalhado de execução.
-3. `scripts/producer.py` e `scripts/consumer_metrics.py`: execução da prática.
-4. `scripts/configure_prometheus.sh`: configuração automática do Prometheus.
-5. `scripts/configure_grafana.sh`: configuração automática do Grafana.
+Pré-requisitos: Docker com Docker Compose v2 e Git. As portas `29092`, `9090` e `3000` precisam estar livres.
 
-### Roteiro resumido
-
-Entre no diretório da aula (na VM, o repositório fica em `~/workspace`):
+### 3.1. Subir a stack
 
 ```bash
-cd ~/workspace/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_3_kafka
+cd M3/Aula_3_kafka/docker
+docker compose up --build -d
+docker compose ps
 ```
 
-Crie e ative o ambiente Python:
+A stack sobe o broker Kafka (modo KRaft, sem ZooKeeper), um serviço `kafka-init` que cria o tópico `iot.air_quality` com 3 partitions, o producer, um consumer, o Prometheus e o Grafana. O `kafka-init` roda uma vez e termina; os demais ficam `running`.
+
+### 3.2. Observar producer e consumer
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r scripts/requirements.txt
+docker compose logs -f --tail=20 producer
 ```
 
-Com o Kafka rodando em `localhost:9092` (veja [`instalando_kafka_vm.md`](instalando_kafka_vm.md); os comandos `kafka-*.sh` abaixo supõem o `PATH` configurado no passo 6 dele), crie o tópico:
+Cada linha mostra o evento publicado: tópico, `key` (o `sensor_id`), partition e offset. Repare que o mesmo sensor aparece sempre na mesma partition. Saia com `Ctrl+C` e olhe o consumer:
 
 ```bash
-kafka-topics.sh \
-  --create \
-  --if-not-exists \
-  --topic iot.air_quality \
-  --bootstrap-server localhost:9092 \
-  --partitions 3 \
-  --replication-factor 1
+docker compose logs -f --tail=20 consumer
 ```
 
-Verifique:
+O consumer registra os eventos lidos com partition e offset, e atualiza as métricas.
+
+### 3.3. Inspecionar o tópico
 
 ```bash
-kafka-topics.sh \
-  --describe \
-  --topic iot.air_quality \
-  --bootstrap-server localhost:9092
+docker compose exec kafka /opt/kafka/bin/kafka-topics.sh \
+  --describe --topic iot.air_quality --bootstrap-server kafka:9092
 ```
 
-> **Em cada nova sessão SSH**, entre no diretório da aula e ative o ambiente virtual antes de rodar qualquer `python scripts/...` (a sessão começa em `~/workspace`, sem o venv):
->
-> ```bash
-> cd ~/workspace/ia-otimizacao-iot-industrias-negocios-public/M3/Aula_3_kafka
-> source .venv/bin/activate
-> ```
-
-Em um terminal (uma sessão SSH), rode o producer:
+A saída mostra `PartitionCount: 3`. Veja o grupo de consumers, as partitions atribuídas e o **lag** de cada uma:
 
 ```bash
-python scripts/producer.py
+docker compose exec kafka /opt/kafka/bin/kafka-consumer-groups.sh \
+  --describe --group air-quality-processors --bootstrap-server kafka:9092
 ```
 
-Em outro terminal (outra sessão SSH), rode o consumer com métricas:
+Com um único consumer, ele fica com as 3 partitions. Anote os valores de `CURRENT-OFFSET` e `LAG`.
+
+### 3.4. Ver as métricas do consumer
+
+O endpoint `/metrics` do consumer é publicado em uma porta dinâmica do host (para permitir o experimento de escala). Descubra a porta e consulte:
 
 ```bash
-python scripts/consumer_metrics.py
+docker compose port consumer 8000
+curl http://localhost:<porta-mostrada>/metrics
 ```
 
-Verifique o endpoint de métricas:
+Procure `iot_events_consumed_total` e `iot_events_by_partition_total`. O Prometheus coleta esse mesmo endpoint por dentro da rede Docker, então os próximos passos não dependem da porta dinâmica.
+
+### 3.5. Escalar consumers no mesmo grupo
+
+Com 3 partitions e 1 consumer, não há paralelismo. Suba para 3 réplicas:
 
 ```bash
-curl http://localhost:8000/metrics
+docker compose up -d --scale consumer=3
 ```
 
-### Experimentos sugeridos
-
-Observe producer e consumer juntos:
-
-- eventos produzidos em JSON;
-- `key=sensor_id`;
-- partition atribuída;
-- offset de cada mensagem;
-- métricas atualizadas em `/metrics`.
-
-Teste consumers no mesmo grupo, **cada um em sua própria sessão SSH** (com o venv ativo, como acima):
+Aguarde alguns segundos (o grupo rebalanceia) e descreva o grupo de novo:
 
 ```bash
-METRICS_PORT=8001 CONSUMER_ID=consumer-1 python scripts/consumer_metrics.py
-METRICS_PORT=8002 CONSUMER_ID=consumer-2 python scripts/consumer_metrics.py
-METRICS_PORT=8003 CONSUMER_ID=consumer-3 python scripts/consumer_metrics.py
+docker compose exec kafka /opt/kafka/bin/kafka-consumer-groups.sh \
+  --describe --group air-quality-processors --bootstrap-server kafka:9092
 ```
 
-Todos usam o grupo padrão `air-quality-processors`. Com 3 partitions, a tendência é cada consumer receber uma partition.
-
-Na VM, cada consumer usa cerca de 6 threads do limite de 256 do container (veja o [guia da VM](../ambiente_vm.md#6-limites-de-memória-e-de-processos)); não é preciso passar de 3 consumers neste experimento.
-
-Teste grupos diferentes, também um por sessão:
+Agora cada consumer deve ficar com **uma** partition (coluna `CONSUMER-ID`). O Prometheus descobre as réplicas pelo DNS do Docker, então todas aparecem no job `iot-kafka-consumers`. Volte para 1 réplica ao final:
 
 ```bash
-GROUP_ID=air-quality-processors METRICS_PORT=8011 CONSUMER_ID=processors-1 python scripts/consumer_metrics.py
-GROUP_ID=air-quality-dashboard METRICS_PORT=8012 CONSUMER_ID=dashboard-1 python scripts/consumer_metrics.py
+docker compose up -d --scale consumer=1
 ```
 
-Consumers em grupos diferentes leem o mesmo tópico de forma independente e mantêm offsets próprios.
+### 3.6. Grupo independente
 
-Pare e reinicie o consumer:
-
-1. Deixe o producer rodando.
-2. Pare o consumer com `Ctrl+C`.
-3. Aguarde alguns segundos.
-4. Inicie o consumer novamente com o mesmo `GROUP_ID`.
-
-O consumer deve retomar a leitura a partir do offset salvo.
-
-### Prometheus e Grafana
-
-Na VM, o Prometheus **já está em execução** (o ambiente o inicia, como `root`). Para adicionar o job da prática, rode o script com `--no-restart` e depois recarregue a configuração com `SIGHUP`, o mesmo procedimento da Aula 1:
+Rode um consumer avulso em **outro** grupo:
 
 ```bash
-bash scripts/configure_prometheus.sh --no-restart
-sudo pkill -HUP -x prometheus
+docker compose run --rm --no-deps \
+  -e GROUP_ID=air-quality-dashboard \
+  -e CONSUMER_ID=dashboard-1 \
+  consumer
 ```
 
-Execute os comandos na VM, a partir do diretório `M3/Aula_3_kafka`.
+Ele lê o tópico desde o início (`AUTO_OFFSET_RESET=earliest`), sem interferir no grupo `air-quality-processors`: cada grupo mantém offsets próprios. Encerre com `Ctrl+C`.
 
-O script faz backup do `prometheus.yml`, adiciona o job da prática e valida com `promtool check config`. O job configurado é:
-
-```yaml
-scrape_configs:
-  - job_name: "iot-kafka-consumers"
-    scrape_interval: 5s
-    static_configs:
-      - targets:
-          - "localhost:8000"
-```
-
-Para múltiplos consumers:
+### 3.7. Parar e retomar (offset)
 
 ```bash
-bash scripts/configure_prometheus.sh --no-restart --targets localhost:8001,localhost:8002,localhost:8003
-sudo pkill -HUP -x prometheus
+docker compose stop consumer
 ```
 
-> **Cuidado com a etapa de reinício do script.** Sem `--no-restart` (ou com `--background`), depois de validar a configuração o script tenta encerrar o Prometheus com `pkill` e subi-lo de novo com `prometheus --config.file=...`. Como usuário comum isso falha: o `pkill` responde `Operation not permitted` e o novo Prometheus falha com `permission denied`. Com `sudo bash scripts/configure_prometheus.sh --background` o script tem permissão e reinicia o Prometheus do ambiente (o log vai para `prometheus.log` no diretório atual; sem `--background`, o Prometheus fica preso ao seu terminal). Como recarregar basta, prefira `--no-restart` seguido de `sudo pkill -HUP -x prometheus`.
-
-Aguarde cerca de 10 segundos e confira o target e os dados (com o consumer rodando):
+Aguarde ~30 segundos com o producer rodando (o lag cresce) e confira:
 
 ```bash
-curl -s http://localhost:9090/api/v1/targets | jq -r '.data.activeTargets[] | "\(.labels.job)\t\(.health)"'
-curl -s 'http://localhost:9090/api/v1/query?query=sum(iot_events_consumed_total)' | jq -c '.data.result'
+docker compose exec kafka /opt/kafka/bin/kafka-consumer-groups.sh \
+  --describe --group air-quality-processors --bootstrap-server kafka:9092
 ```
 
-O job `iot-kafka-consumers` deve aparecer com `up`.
-
-Para configurar o Grafana já instalado na VM:
+Religue e observe o consumer retomar do offset salvo e zerar o lag:
 
 ```bash
-bash scripts/configure_grafana.sh
+docker compose start consumer
+docker compose logs -f --tail=20 consumer
 ```
 
-Por padrão, o script usa `http://localhost:3000` para o Grafana, `admin/admin` como credencial inicial e `http://localhost:9090` como URL do Prometheus. Se a senha já foi alterada:
+### 3.8. Prometheus e Grafana
 
-```bash
-GRAFANA_USER=admin GRAFANA_PASSWORD='sua-senha' bash scripts/configure_grafana.sh
+- Prometheus: <http://localhost:9090> — em **Status > Targets**, o job `iot-kafka-consumers` deve estar `UP` (uma entrada por réplica do consumer). Consultas úteis em **Graph**:
+
+```promql
+rate(iot_events_consumed_total[1m])
+iot_events_by_partition_total
+iot_kafka_last_offset
+iot_temperature_celsius
 ```
 
-O script cria ou atualiza:
-
-- data source `Prometheus - Kafka IoT`;
-- pasta `OpAIoT`;
-- dashboard `Kafka IoT - Telemetria Observavel`.
-
-Dashboard:
+- Grafana: <http://localhost:3000> (usuário `admin`, senha `admin`) — o datasource `Prometheus - Kafka IoT` e o dashboard `Kafka IoT - Telemetria Observavel` já vêm provisionados:
 
 ```text
 http://localhost:3000/d/iot-kafka-telemetry
 ```
 
-Esse é o endereço de dentro da VM. No navegador do seu computador, o dashboard abre em `http://andromeda.lasdpc.icmc.usp.br:13XXX/d/iot-kafka-telemetry`, trocando `XXX` pelos três dígitos do seu usuário `opaiotXXX` (veja a [seção 5 do guia da VM](../ambiente_vm.md#5-interface-web-do-prometheus-e-do-grafana)); o login é `admin` / `admin`. O Prometheus abre em `http://andromeda.lasdpc.icmc.usp.br:19XXX/targets`. Para conferir pela linha de comando que o dashboard foi criado:
+Refaça o experimento de escala (3.5) olhando o painel de eventos por partition e o de taxa de consumo.
+
+### 3.9. Encerrar
 
 ```bash
-curl -s -u admin:admin 'http://localhost:3000/api/search?query=Kafka' | jq -c '.[] | {uid, title}'
+docker compose down        # para os containers
+docker compose down -v     # remove também os volumes (dados do Kafka, Prometheus e Grafana)
 ```
 
-Consultas PromQL úteis:
+### Problemas comuns
 
-```promql
-iot_events_consumed_total
-iot_temperature_celsius
-iot_humidity_percent
-iot_co2_ppm
-rate(iot_events_consumed_total[1m])
-iot_events_by_partition_total
-iot_kafka_last_offset
-```
+- `kafka-init` com erro: o broker ainda não estava pronto; rode `docker compose up -d` de novo (o tópico usa `--if-not-exists`).
+- Consumer sem eventos: confira `docker compose logs kafka-init` (o tópico existe?) e se o producer está rodando.
+- Quer rodar os scripts Python no host, contra o Kafka do Docker (`localhost:29092`)? Veja [scripts/README.md](scripts/README.md).
 
-Painéis criados no Grafana:
+## 4. Sugestão de exercícios sobre a prática
 
-- temperatura por sensor;
-- umidade por sensor;
-- CO2 por sensor;
-- taxa de eventos consumidos;
-- eventos por partition;
-- último offset consumido por partition;
-- total de eventos consumidos.
-
-Para o passo a passo completo, consulte [scripts/README.md](scripts/README.md).
-
-> **Caso precise reiniciar o Grafana**
->
-> O `configure_grafana.sh` usa a API HTTP e aplica as mudanças na hora, então normalmente não é preciso reiniciar. Se mesmo assim precisar, o Grafana da VM pertence ao `root` e roda sem `systemd`: use `sudo`, e `sudo bash -c` para que o redirecionamento do log também tenha permissão.
->
-> ```bash
-> sudo pkill -x grafana
-> sleep 2
-> sudo bash -c 'nohup grafana-server --homepath=/usr/share/grafana --config=/etc/grafana/grafana.ini --packaging=deb cfg:server.http_addr=0.0.0.0 cfg:server.http_port=3000 >> /var/log/opaiot/grafana.log 2>&1 &'
-> ```
->
-> Depois confira com `curl http://localhost:3000/api/health`. Detalhes na [seção 4.3 do guia da VM](../ambiente_vm.md#43-reiniciar-o-prometheus-ou-o-grafana-quando-for-realmente-necessário).
+1. **Chave e ordenação.** Nos logs do producer, confirme a partition de cada `sensor_id`. Depois edite `scripts/producer.py` para publicar **sem chave** (`key=None`), rode `docker compose up --build -d` e observe o que muda na distribuição. O que se perde ao remover a chave?
+2. **Mais consumers que partitions.** Escale para 4 réplicas (`--scale consumer=4`) e descreva o grupo. O que acontece com o quarto consumer? Relacione com o limite de paralelismo imposto pelo número de partitions.
+3. **Lag sob carga.** Reduza `SEND_INTERVAL_SECONDS` do producer para `0.1` no `docker/docker-compose.yml`, recrie a stack e acompanhe `kafka-consumer-groups.sh --describe` e o dashboard. O consumer acompanha? Em que situação o lag cresceria sem parar?
+4. **Retomada de offset.** Repita o passo 3.7, mas apague o grupo antes de religar o consumer (`kafka-consumer-groups.sh --delete --group air-quality-processors ...` com o consumer parado). De onde o consumer retoma, e por quê? Relacione com `AUTO_OFFSET_RESET`.
+5. **Novo painel.** Adicione ao dashboard do Grafana um painel com o lag aproximado por partition usando `iot_kafka_last_offset` e as métricas disponíveis. Que limitação existe em medir lag só com métricas do consumer?

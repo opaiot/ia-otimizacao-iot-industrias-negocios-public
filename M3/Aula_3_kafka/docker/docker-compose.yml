@@ -15,6 +15,8 @@
 #   Dashboard            : http://localhost:3000/d/iot-kafka-telemetry
 #   Kafka (host)         : localhost:29092
 
+name: opaiot-aula3
+
 services:
   kafka:
     image: apache/kafka:4.0.0
@@ -46,7 +48,7 @@ services:
     networks:
       - kafka-iot
 
-  # Cria o tópico iot.air_quality com 3 partitions, como na prática da VM.
+  # Cria o tópico iot.air_quality com 3 partitions antes de producer e consumer subirem.
   kafka-init:
     image: apache/kafka:4.0.0
     container_name: aula3_kafka_init
@@ -85,25 +87,28 @@ services:
     networks:
       - kafka-iot
 
+  # Sem container_name e com porta dinâmica no host: assim o serviço pode ser
+  # escalado com --scale consumer=3 (veja o README). Descubra a porta publicada
+  # com: docker compose port consumer 8000
   consumer:
     build:
       context: ..
       dockerfile: docker/Dockerfile
     image: aula3-kafka-iot
-    container_name: aula3_consumer
     restart: unless-stopped
     depends_on:
       kafka-init:
         condition: service_completed_successfully
     ports:
-      - "8000:8000" # endpoint /metrics
+      - "8000" # endpoint /metrics em porta dinâmica do host
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_TOPIC: iot.air_quality
       GROUP_ID: air-quality-processors
       AUTO_OFFSET_RESET: earliest
       METRICS_PORT: "8000"
-      CONSUMER_ID: consumer-docker
+      # CONSUMER_ID fica no padrão (hostname:porta): assim cada réplica escalada
+      # aparece com identificador próprio nas métricas e no dashboard.
     command: ["python", "scripts/consumer_metrics.py"]
     networks:
       - kafka-iot
