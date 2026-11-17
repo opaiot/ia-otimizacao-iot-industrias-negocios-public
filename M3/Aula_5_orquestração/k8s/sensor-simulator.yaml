@@ -15,17 +15,24 @@ spec:
     spec:
       containers:
         - name: sensor-simulator
-          # Construa a imagem localmente antes de aplicar em Minikube/K3s/KillerCoda.
+          # Imagem construída localmente (veja o roteiro). Never: o cluster não tenta
+          # baixar a imagem de um registry; se ela não estiver no node, o Pod mostra
+          # ErrImageNeverPull.
           image: opaiot/sensor-simulator:local
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Never
           env:
+            # Downward API: cada Pod recebe o próprio nome como DEVICE_ID.
+            # Assim, ao escalar para 3 réplicas, cada uma simula um dispositivo diferente.
+            - name: DEVICE_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            # $(DEVICE_ID) é expandido pelo Kubernetes porque DEVICE_ID foi definido acima.
+            - name: MQTT_TOPIC
+              value: iot/$(DEVICE_ID)/telemetry
             - name: MQTT_HOST
               value: mosquitto
             - name: MQTT_PORT
               value: "1883"
-            - name: MQTT_TOPIC
-              value: iot/device-001/telemetry
-            - name: DEVICE_ID
-              value: device-001
             - name: PUBLISH_INTERVAL
               value: "2"

@@ -1,242 +1,80 @@
-# Kubernetes - Aula 5
+# Manifests Kubernetes - Aula 5
 
-Manifests didáticos para executar a stack IoT no namespace `opaiot-p5`.
+Manifests didáticos da stack IoT no namespace `opaiot-p5`. Esta página é só a **referência dos arquivos**. O passo a passo da prática, com preparação do ambiente, verificações e exercícios, está no [roteiro Kubernetes](../docs/kubernetes-pratica.md).
 
 ## Arquivos
 
-| Arquivo | Conteúdo |
-| --- | --- |
-| `namespace.yaml` | Namespace da prática |
-| `mosquitto.yaml` | ConfigMap, Deployment e Service MQTT |
-| `kafka.yaml` | Kafka single-node em KRaft |
-| `kafka-ui.yaml` | Kafka UI via NodePort |
-| `sensor-simulator.yaml` | Deployment do sensor Python |
-| `mqtt-to-kafka.yaml` | Deployment da ponte MQTT para Kafka |
-| `iot-processor.yaml` | Deployment e Service de métricas |
-| `prometheus.yaml` | ConfigMap, Deployment e NodePort |
-| `grafana.yaml` | Datasource, Deployment e NodePort |
-| `alternativas/redpanda.yaml` | Broker alternativo leve para laboratório |
+| Arquivo | Recursos | O que observar |
+| --- | --- | --- |
+| `00-namespace.yaml` | Namespace `opaiot-p5` | O prefixo `00-` faz este arquivo ser aplicado primeiro em `kubectl apply -f k8s/`. |
+| `grafana-dashboard.yaml` | ConfigMap `grafana-dashboards` | Cópia de `grafana/dashboards/iot-dashboard.json`, o mesmo dashboard do Compose. |
+| `grafana.yaml` | ConfigMaps do datasource e do provider de dashboards, Deployment, Service `NodePort` 30300 | Provisionamento do Grafana feito só com ConfigMaps. |
+| `iot-processor.yaml` | Deployment, Service `ClusterIP` 8000 | `readinessProbe` em `/metrics`. |
+| `kafka-ui.yaml` | Deployment, Service `NodePort` 30080 | Lê o cluster por `kafka:9092`. |
+| `kafka.yaml` | Deployment, Service `ClusterIP` 9092 | KRaft com um nó só, dados em `emptyDir` e heap limitado a 512 MB. |
+| `mosquitto.yaml` | ConfigMap, Deployment, Service `ClusterIP` 1883 | `mosquitto.conf` vem de um ConfigMap. |
+| `mqtt-to-kafka.yaml` | Deployment | Não tem Service, porque nada se conecta à ponte. |
+| `prometheus.yaml` | ConfigMap, Deployment, Service `NodePort` 30090 | Coleta `iot-processor:8000` pelo nome do Service. |
+| `sensor-simulator.yaml` | Deployment | `DEVICE_ID` vem do nome do Pod (Downward API): cada réplica é um dispositivo diferente. |
+| `alternativas/redpanda.yaml` | Deployment `redpanda`, Service `kafka` | Substitui o `kafka.yaml`. Não é aplicado por `kubectl apply -f k8s/`. Veja a [alternativa Redpanda](../docs/kubernetes-pratica.md#alternativa-redpanda). |
 
-## Executar no Windows com Docker Desktop
+## Aplicar e remover
 
-Use este caminho quando estiver rodando a aula no Windows com Docker Desktop.
-
-### 1. Habilitar Kubernetes
-
-1. Abra o Docker Desktop.
-2. Entre na área **Kubernetes**.
-3. Crie/habilite um cluster Kubernetes.
-4. Para esta prática, prefira o modo **Kubeadm** com um nó. É o caminho mais simples para usar imagens criadas com `docker build` no próprio Docker Desktop.
-
-Em versões mais antigas do Docker Desktop, o caminho pode aparecer como **Settings > Kubernetes > Enable Kubernetes > Apply & Restart**.
-
-### 2. Conferir o contexto do kubectl
-
-No PowerShell:
-
-```powershell
-kubectl config get-contexts
-kubectl config use-context docker-desktop
-kubectl get nodes
-```
-
-O esperado é ver um node chamado `docker-desktop` com status `Ready`.
-
-Se o comando `kubectl` não for encontrado, confirme que o Docker Desktop terminou a instalação do Kubernetes, reabra o PowerShell e confira se o comando entrou no `PATH`:
-
-```powershell
-where.exe kubectl
-kubectl version --client
-```
-
-### 3. Entrar no diretório da aula
-
-```powershell
-cd ./ia-otimizacao-iot-industrias-negocios-public/M3/Aula_5_orquestração
-```
-
-Se o repositório estiver em outro local, ajuste o caminho antes de continuar.
-
-### 4. Construir as imagens locais
-
-Os manifests usam imagens locais para os três serviços Python. No Docker Desktop, construa as imagens antes de aplicar os YAML:
-
-```powershell
-docker build -t opaiot/sensor-simulator:local .\services\sensor-simulator
-docker build -t opaiot/mqtt-to-kafka:local .\services\mqtt-to-kafka
-docker build -t opaiot/iot-processor:local .\services\iot-processor
-```
-
-Confira:
-
-```powershell
-docker images opaiot/*
-```
-
-### 5. Aplicar os manifests
-
-```powershell
-kubectl apply -f .\k8s\namespace.yaml
-kubectl wait --for=jsonpath='{.status.phase}'=Active namespace/opaiot-p5 --timeout=60s
-
-kubectl apply -f .\k8s\mosquitto.yaml
-kubectl apply -f .\k8s\kafka.yaml
-kubectl apply -f .\k8s\kafka-ui.yaml
-kubectl apply -f .\k8s\sensor-simulator.yaml
-kubectl apply -f .\k8s\mqtt-to-kafka.yaml
-kubectl apply -f .\k8s\iot-processor.yaml
-kubectl apply -f .\k8s\prometheus.yaml
-kubectl apply -f .\k8s\grafana.yaml
-```
-
-Evite `kubectl apply -f .\k8s\` nesta prática. Esse comando pode aplicar os arquivos fora da ordem esperada e, dependendo do ambiente, tentar criar recursos namespaced antes de o namespace `opaiot-p5` estar pronto.
-
-Verifique os recursos:
-
-```powershell
-kubectl get pods -n opaiot-p5
-kubectl get deploy -n opaiot-p5
-kubectl get svc -n opaiot-p5
-```
-
-### 6. Acessar as interfaces
-
-No Docker Desktop, os `NodePort` desta prática podem ser acessados pelo `localhost`:
-
-```text
-Kafka UI:   http://localhost:30080
-Prometheus: http://localhost:30090
-Grafana:    http://localhost:30300
-```
-
-No Grafana, use `admin/admin`.
-
-### 7. Ver logs principais
-
-```powershell
-kubectl logs deploy/sensor-simulator -n opaiot-p5
-kubectl logs deploy/mqtt-to-kafka -n opaiot-p5
-kubectl logs deploy/iot-processor -n opaiot-p5
-```
-
-Para acompanhar em tempo real:
-
-```powershell
-kubectl logs -f deploy/iot-processor -n opaiot-p5
-```
-
-### 8. Diagnóstico rápido
-
-Se algum Pod ficar com `ImagePullBackOff`, confirme que as imagens locais existem:
-
-```powershell
-docker images opaiot/*
-kubectl describe pod <pod> -n opaiot-p5
-```
-
-Se o Kafka ficar pesado no Docker Desktop, use a alternativa Redpanda:
-
-```powershell
-kubectl delete -f .\k8s\kafka.yaml
-kubectl apply -f .\k8s\alternativas\redpanda.yaml
-kubectl set env deployment/mqtt-to-kafka KAFKA_BOOTSTRAP_SERVERS=redpanda:9092 -n opaiot-p5
-kubectl set env deployment/iot-processor KAFKA_BOOTSTRAP_SERVERS=redpanda:9092 -n opaiot-p5
-```
-
-Se quiser começar do zero:
-
-```powershell
-kubectl delete namespace opaiot-p5
-```
-
-## Preparar imagens dos apps
+Do diretório da aula, depois de preparar as imagens dos apps ([passo 3 do roteiro](../docs/kubernetes-pratica.md#3-construir-as-imagens-dos-apps)):
 
 ```bash
-docker build -t opaiot/sensor-simulator:local services/sensor-simulator
-docker build -t opaiot/mqtt-to-kafka:local services/mqtt-to-kafka
-docker build -t opaiot/iot-processor:local services/iot-processor
+kubectl apply -f k8s/
+kubectl wait --for=condition=Available deployment --all -n opaiot-p5 --timeout=300s
 ```
 
-Em Minikube:
+O `kubectl` aplica os arquivos de uma pasta em ordem alfabética e não entra em subpastas sem `-R`. Por isso o namespace vem antes de tudo e `alternativas/` fica de fora.
 
-```bash
-minikube image load opaiot/sensor-simulator:local
-minikube image load opaiot/mqtt-to-kafka:local
-minikube image load opaiot/iot-processor:local
-```
-
-## Aplicar
-
-```bash
-kubectl apply -f k8s/namespace.yaml
-kubectl wait --for=jsonpath='{.status.phase}'=Active namespace/opaiot-p5 --timeout=60s
-kubectl apply -f k8s/mosquitto.yaml
-kubectl apply -f k8s/kafka.yaml
-kubectl apply -f k8s/kafka-ui.yaml
-kubectl apply -f k8s/sensor-simulator.yaml
-kubectl apply -f k8s/mqtt-to-kafka.yaml
-kubectl apply -f k8s/iot-processor.yaml
-kubectl apply -f k8s/prometheus.yaml
-kubectl apply -f k8s/grafana.yaml
-```
-
-## Listar
-
-```bash
-kubectl get pods -n opaiot-p5
-kubectl get deploy -n opaiot-p5
-kubectl get svc -n opaiot-p5
-```
-
-## Logs
-
-```bash
-kubectl logs deploy/sensor-simulator -n opaiot-p5
-kubectl logs deploy/mqtt-to-kafka -n opaiot-p5
-kubectl logs deploy/iot-processor -n opaiot-p5
-```
-
-## Inspecionar
-
-```bash
-kubectl describe pod <pod> -n opaiot-p5
-```
-
-## Escalar
-
-```bash
-kubectl scale deployment sensor-simulator --replicas=3 -n opaiot-p5
-kubectl get pods -n opaiot-p5 -l app=sensor-simulator
-```
-
-## Remover
+Para remover tudo:
 
 ```bash
 kubectl delete namespace opaiot-p5
 ```
 
-## NodePorts
+## Imagens
 
-| Serviço | NodePort |
+| Imagem | Origem |
 | --- | --- |
-| Kafka UI | `30080` |
-| Prometheus | `30090` |
-| Grafana | `30300` |
+| `opaiot/sensor-simulator:local`, `opaiot/mqtt-to-kafka:local`, `opaiot/iot-processor:local` | Construídas localmente a partir de `services/`. Usam `imagePullPolicy: Never`: o cluster nunca tenta baixá-las e, se a imagem não estiver no node, o Pod mostra `ErrImageNeverPull`. |
+| `apache/kafka:4.0.0`, `prom/prometheus:v2.53.0`, `grafana/grafana:10.4.0`, `eclipse-mosquitto:2` | As mesmas versões do `docker-compose.yaml`. |
+| `provectuslabs/kafka-ui:v0.7.2` | Última versão publicada do Kafka UI (o Compose usa `latest`). |
+| `docker.redpanda.com/redpandadata/redpanda:v24.2.7` | Só na alternativa Redpanda. |
 
-## Alternativa Redpanda
+As versões ficam fixas para a aula ser reproduzível. Uma tag `latest` muda sem aviso, e a configuração do Kafka, por exemplo, muda entre versões.
 
-Se o Kafka oficial ficar pesado no playground:
+## Acesso às interfaces
+
+O caminho principal é `kubectl port-forward` ([passo 10 do roteiro](../docs/kubernetes-pratica.md#10-acessar-prometheus-grafana-e-kafka-ui)). Os Services das interfaces também são `NodePort`:
+
+| Serviço | Porta do Service | NodePort |
+| --- | --- | --- |
+| Kafka UI | `8080` | `30080` |
+| Prometheus | `9090` | `30090` |
+| Grafana | `3000` | `30300` |
+
+## Simplificações deste laboratório
+
+Estes manifests priorizam a leitura e a comparação com o Compose. Não use assim em produção:
+
+- **Kafka sem persistência.** É um Deployment com `emptyDir`: se o Pod for recriado, tópicos, mensagens e offsets se perdem. Em produção, use StatefulSet com PersistentVolumeClaim e mais de um broker.
+- **Prometheus e Grafana sem volume.** O histórico de métricas e o que for criado pela interface do Grafana somem com o Pod. Datasource e dashboard voltam porque vêm de ConfigMaps.
+- **Senha do Grafana em texto puro** no `env`. Em produção, use um Secret.
+- **Sensor e ponte sem probes.** `Running` e `1/1` só dizem que o processo iniciou, não que as conexões com MQTT e Kafka funcionam.
+- **Sem `resources` (requests e limits).** O scheduler não sabe quanto cada Pod precisa.
+- **Interfaces expostas por `NodePort`, sem autenticação** (e MQTT anônimo). Em produção, use Ingress com TLS e autenticação.
+- **Tópico criado automaticamente**, com 1 partição. No Compose, o `kafka-init` cria o tópico com 3 partições; em produção, crie tópicos explicitamente (Job ou operador).
+- **Imagens dos apps sem registry.** Em produção, as imagens ficam em um registry, com tags versionadas.
+
+## Alterar o dashboard
+
+O dashboard está em dois lugares: `grafana/dashboards/iot-dashboard.json` (Compose) e `k8s/grafana-dashboard.yaml` (Kubernetes). Ao alterar o JSON, atualize o ConfigMap. Em Linux ou macOS, o comando abaixo gera o YAML novo (depois, recoloque o comentário do topo do arquivo):
 
 ```bash
-kubectl delete -f k8s/kafka.yaml
-kubectl apply -f k8s/alternativas/redpanda.yaml
-kubectl set env deployment/mqtt-to-kafka KAFKA_BOOTSTRAP_SERVERS=redpanda:9092 -n opaiot-p5
-kubectl set env deployment/iot-processor KAFKA_BOOTSTRAP_SERVERS=redpanda:9092 -n opaiot-p5
-```
-
-Depois acompanhe:
-
-```bash
-kubectl rollout status deployment/mqtt-to-kafka -n opaiot-p5
-kubectl rollout status deployment/iot-processor -n opaiot-p5
+kubectl create configmap grafana-dashboards -n opaiot-p5 \
+  --from-file=grafana/dashboards/iot-dashboard.json \
+  --dry-run=client -o yaml > k8s/grafana-dashboard.yaml
 ```

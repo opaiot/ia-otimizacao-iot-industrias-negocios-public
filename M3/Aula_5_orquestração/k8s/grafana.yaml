@@ -15,6 +15,27 @@ data:
         isDefault: true
         editable: true
 ---
+# Diz ao Grafana para carregar os dashboards da pasta montada a partir do
+# ConfigMap grafana-dashboards (arquivo grafana-dashboard.yaml).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-provider
+  namespace: opaiot-p5
+data:
+  dashboards.yml: |
+    apiVersion: 1
+    providers:
+      - name: OpAIoT
+        orgId: 1
+        folder: OpAIoT
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 10
+        allowUiUpdates: true
+        options:
+          path: /var/lib/grafana/dashboards
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -32,23 +53,38 @@ spec:
     spec:
       containers:
         - name: grafana
-          image: grafana/grafana:latest
+          image: grafana/grafana:10.4.0
           ports:
             - containerPort: 3000
               name: web
           env:
+            # Senha didática em texto puro. Em produção, use um Secret.
             - name: GF_SECURITY_ADMIN_USER
               value: admin
             - name: GF_SECURITY_ADMIN_PASSWORD
               value: admin
+          # Sem volume para /var/lib/grafana: o que for criado pela interface se
+          # perde quando o Pod é recriado. Datasource e dashboard voltam porque
+          # vêm dos ConfigMaps.
           volumeMounts:
             - name: grafana-datasources
               mountPath: /etc/grafana/provisioning/datasources/datasource.yml
               subPath: datasource.yml
+            - name: grafana-dashboard-provider
+              mountPath: /etc/grafana/provisioning/dashboards/dashboards.yml
+              subPath: dashboards.yml
+            - name: grafana-dashboards
+              mountPath: /var/lib/grafana/dashboards
       volumes:
         - name: grafana-datasources
           configMap:
             name: grafana-datasources
+        - name: grafana-dashboard-provider
+          configMap:
+            name: grafana-dashboard-provider
+        - name: grafana-dashboards
+          configMap:
+            name: grafana-dashboards
 ---
 apiVersion: v1
 kind: Service

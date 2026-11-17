@@ -15,9 +15,9 @@ spec:
     spec:
       containers:
         - name: iot-processor
-          # Construa a imagem localmente antes de aplicar em Minikube/K3s/KillerCoda.
+          # Imagem construída localmente (veja o roteiro). Never: sem pull de registry.
           image: opaiot/iot-processor:local
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Never
           ports:
             - containerPort: 8000
               name: metrics
@@ -30,6 +30,8 @@ spec:
               value: iot-processor
             - name: METRICS_PORT
               value: "8000"
+          # Enquanto /metrics não responde, o Pod fica fora do Service (READY 0/1).
+          # A probe não ordena a subida dos Pods: só decide quando o Pod recebe tráfego.
           readinessProbe:
             httpGet:
               path: /metrics

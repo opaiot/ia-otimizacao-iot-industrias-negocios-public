@@ -11,7 +11,8 @@ Ao final da prática, você deve conseguir:
 - consumir eventos Kafka com Python;
 - expor métricas Prometheus;
 - visualizar os dados no Grafana;
-- relacionar os mesmos componentes com Deployments, Services e ConfigMaps no Kubernetes.
+- relacionar os mesmos componentes com Deployments, Services e ConfigMaps no Kubernetes;
+- observar no Kubernetes a escala de réplicas, a recriação de Pods (reconciliação) e a diferença entre mudanças imperativas e declarativas.
 
 ## Arquitetura
 
@@ -32,7 +33,9 @@ O Kafka UI também é incluído no Docker Compose para inspecionar tópicos, men
 - Docker 20.10.4 ou superior.
 - Docker Compose v2.
 - Navegador para Kafka UI, Prometheus e Grafana.
-- Para Kubernetes: `kubectl` e um cluster local ou playground como KillerCoda, Minikube ou K3s.
+- Para Kubernetes: `kubectl` e um cluster (Kubernetes do Docker Desktop, Minikube, K3s ou um playground online como o KillerCoda).
+
+> A VM do curso não tem Docker nem `kubectl`. Esta aula roda na sua máquina ou em um playground.
 
 ## Portas
 
@@ -99,9 +102,9 @@ docker compose down -v
 
 ## Kubernetes
 
-A pasta `k8s/` contém manifests simples para namespace, Deployments, Services, ConfigMaps, Prometheus, Grafana e Kafka UI.
+A pasta `k8s/` contém manifests simples para namespace, Deployments, Services, ConfigMaps, Prometheus, Grafana (com o mesmo dashboard do Compose) e Kafka UI. A stack inteira é aplicada com `kubectl apply -f k8s/`.
 
-Os três serviços Python usam imagens locais:
+Os três serviços Python usam imagens locais, que você constrói antes de aplicar os manifests:
 
 ```text
 opaiot/sensor-simulator:local
@@ -109,13 +112,13 @@ opaiot/mqtt-to-kafka:local
 opaiot/iot-processor:local
 ```
 
-Antes de aplicar os manifests em Minikube, K3s ou KillerCoda, construa e carregue essas imagens conforme o runtime do ambiente. O roteiro Kubernetes mostra comandos e alternativas.
+A forma de levar essas imagens ao cluster depende do ambiente (Docker Desktop, Minikube, K3s ou playground). O [roteiro Kubernetes](docs/kubernetes-pratica.md#3-construir-as-imagens-dos-apps) traz os comandos de cada um.
 
 ## Roteiros
 
 - [Prática Docker Compose](docs/docker-compose-pratica.md)
-- [Prática Kubernetes](docs/kubernetes-pratica.md)
-- [README dos manifests Kubernetes](k8s/README.md)
+- [Prática Kubernetes](docs/kubernetes-pratica.md): roteiro completo, com objetivos, verificações e perguntas.
+- [Manifests Kubernetes](k8s/README.md): referência dos arquivos de `k8s/`, versões das imagens e simplificações do laboratório.
 
 ## Progressão sugerida
 

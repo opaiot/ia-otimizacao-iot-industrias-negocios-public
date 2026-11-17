@@ -15,9 +15,9 @@ spec:
     spec:
       containers:
         - name: mqtt-to-kafka
-          # Construa a imagem localmente antes de aplicar em Minikube/K3s/KillerCoda.
+          # Imagem construída localmente (veja o roteiro). Never: sem pull de registry.
           image: opaiot/mqtt-to-kafka:local
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Never
           env:
             - name: MQTT_HOST
               value: mosquitto

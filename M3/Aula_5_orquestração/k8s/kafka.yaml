@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: kafka
-          image: apache/kafka:latest
+          image: apache/kafka:4.0.0
           ports:
             - containerPort: 9092
               name: kafka
@@ -55,8 +55,13 @@ spec:
               value: "1"
             - name: KAFKA_LOG_DIRS
               value: /tmp/kraft-combined-logs
+            # O tópico iot.telemetry é criado na primeira mensagem, com 1 partição.
+            # (No Compose, o serviço kafka-init cria o tópico com 3 partições.)
             - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
               value: "true"
+            # Limita a memória da JVM, como no Compose. O padrão do Kafka é 1 GB de heap.
+            - name: KAFKA_HEAP_OPTS
+              value: -Xms256m -Xmx512m
           volumeMounts:
             - name: kafka-data
               mountPath: /tmp/kraft-combined-logs
@@ -66,6 +71,9 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 10
       volumes:
+        # Simplificação de laboratório: emptyDir vive e morre com o Pod.
+        # Se o Pod do Kafka for apagado, tópicos, mensagens e offsets se perdem.
+        # Em produção, Kafka roda como StatefulSet com PersistentVolumeClaim.
         - name: kafka-data
           emptyDir: {}
 ---

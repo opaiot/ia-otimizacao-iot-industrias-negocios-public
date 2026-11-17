@@ -1,5 +1,13 @@
-# Alternativa didática ao kafka.yaml para playgrounds pequenos.
-# Se aplicar este arquivo, ajuste os apps para KAFKA_BOOTSTRAP_SERVERS=redpanda:9092.
+# Alternativa didática ao kafka.yaml para playgrounds com pouca memória.
+#
+# Redpanda fala o protocolo Kafka. O Service abaixo se chama "kafka", o mesmo
+# nome usado pelo kafka.yaml: por isso mqtt-to-kafka, iot-processor e Kafka UI
+# continuam usando kafka:9092 sem nenhuma alteração. O nome do Service é o
+# contrato; o que roda atrás dele pode mudar.
+#
+# Uso (veja a seção "Alternativa Redpanda" em docs/kubernetes-pratica.md):
+#   kubectl delete -f k8s/kafka.yaml
+#   kubectl apply -f k8s/alternativas/redpanda.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -17,28 +25,31 @@ spec:
     spec:
       containers:
         - name: redpanda
-          image: docker.redpanda.com/redpandadata/redpanda:latest
-          command:
-            - /bin/sh
-            - -c
+          image: docker.redpanda.com/redpandadata/redpanda:v24.2.7
+          # O entrypoint da imagem repassa estes argumentos ao rpk ("rpk redpanda start ...").
           args:
-            - |
-              redpanda start \
-                --mode dev-container \
-                --smp 1 \
-                --memory 512M \
-                --reserve-memory 0M \
-                --overprovisioned \
-                --kafka-addr 0.0.0.0:9092 \
-                --advertise-kafka-addr redpanda:9092
+            - redpanda
+            - start
+            - --mode=dev-container
+            - --smp=1
+            - --memory=512M
+            - --reserve-memory=0M
+            - --overprovisioned
+            - --kafka-addr=0.0.0.0:9092
+            - --advertise-kafka-addr=kafka:9092
           ports:
             - containerPort: 9092
               name: kafka
+          readinessProbe:
+            tcpSocket:
+              port: kafka
+            initialDelaySeconds: 5
+            periodSeconds: 5
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: redpanda
+  name: kafka
   namespace: opaiot-p5
 spec:
   selector:
