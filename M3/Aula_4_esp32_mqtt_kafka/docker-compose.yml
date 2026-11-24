@@ -34,8 +34,13 @@ services:
     restart: unless-stopped
     networks:
       - aula4-iot
+      - aula3-kafka
 
 
 networks:
   aula4-iot:
     driver: bridge
+
+  aula3-kafka:
+    external: true
+    name: docker_kafka-iot
