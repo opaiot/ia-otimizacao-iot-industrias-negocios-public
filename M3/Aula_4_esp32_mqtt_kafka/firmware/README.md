@@ -11,7 +11,7 @@ Publica telemetria no broker MQTT no formato da Aula 3, pronta para o bridge `sc
 ## Rápido (gravando e testando)
 
 1. Abra `esp32_mq7_mqtt.ino` na Arduino IDE ou no PlatformIO.
-2. Ajuste `MQTT_SERVER` com o IP do host (use `ipconfig` no Windows ou `ifconfig`/`ip a` no Linux).
+2. Ajuste `MQTT_SERVER` com o IP do host (use `ipconfig` no Windows ou `ifconfig`/`ip a` no Linux) e `MQTT_PORT` com `1883`. O arquivo vem com `andromeda.lasdpc.icmc.usp.br` e a porta `20202`, que **não** levam ao Mosquitto desta aula.
 3. Compile e grave na placa ESP32.
 4. Para simular, crie um projeto no Wokwi e cole o código; ajuste `MQTT_SERVER` conforme o endpoint acessível.
 
@@ -23,7 +23,7 @@ Publica telemetria no broker MQTT no formato da Aula 3, pronta para o bridge `sc
 | DHT22 | GPIO 15 (temperatura e umidade) |
 | MQ-7 | GPIO 34 / AOUT (monóxido de carbono) |
 | Protocolo | MQTT (porta 1883) |
-| Tópico padrão | `opaiot/temperature` |
+| Tópico padrão | `opaiot/air_quality` |
 
 ## Payload MQTT
 
@@ -54,7 +54,8 @@ Edite as constantes no topo de [esp32_mq7_mqtt.ino](esp32_mq7_mqtt.ino):
 | `WIFI_SSID` | `Wokwi-GUEST` | SSID da sua rede |
 | `WIFI_PASS` | `""` | Senha do WiFi |
 | `MQTT_SERVER` | IP do host na rede local | IP do PC/servidor com Mosquitto |
-| `MQTT_TOPIC` | `opaiot/temperature` | Igual ao `MQTT_TOPIC` do bridge Python |
+| `MQTT_PORT` | `1883` | Porta publicada pelo Mosquitto (`MQTT_HOST_PORT` do `.env` da aula, padrão `1883`) |
+| `MQTT_TOPIC` | `opaiot/air_quality` | Igual ao `MQTT_TOPIC` do bridge Python |
 | `SENSOR_ID` | `sensor-01` | Identificador do sensor |
 | `ROOM` | `lab-01` | Sala ou ambiente |
 | `DHT_PIN` | `15` | GPIO do DHT22 |
@@ -73,8 +74,8 @@ Use o **Endereço IPv4** da interface ativa. Não use `localhost` no firmware.
 
 1. Crie um projeto ESP32 com DHT22 no pino 15 e MQ-7 com AOUT no GPIO 34.
 2. Cole o conteúdo de `esp32_mq7_mqtt.ino`.
-3. Ajuste `MQTT_SERVER` para o IP acessível pelo simulador.
-4. Suba Mosquitto no host e execute o bridge Python.
+3. Ajuste `MQTT_SERVER` e `MQTT_PORT` para o endereço acessível pelo simulador.
+4. Suba o Mosquitto e a ponte com Docker Compose, conforme o [README da aula](../README.md).
 
 ## Hardware físico
 

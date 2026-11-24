@@ -1,17 +1,30 @@
-name: opaiot-aula4
+# Sobe o broker MQTT desta aula e a ponte MQTT -> Kafka.
+#
+# O Kafka vem da stack da Aula 3, que precisa estar no ar ANTES deste compose:
+#   cd ../Aula_3_kafka/docker && docker compose up --build -d
+#
+# A ponte participa de duas redes: a desta aula (para falar com o Mosquitto) e a
+# da Aula 3 (para falar com o Kafka pelo nome do serviço, kafka:9092). Usar a
+# rede da Aula 3 é necessário porque o listener externo do broker é anunciado
+# como localhost:29092, endereço que só funciona para clientes no host.
+#
+# Uso (a partir desta pasta):
+#   docker compose up --build -d
 
+name: opaiot-aula4
 
 services:
   mosquitto:
     image: eclipse-mosquitto:2
     ports:
-      - "${MQTT_PORT:-1883}:1883"
+      # Porta publicada no host para o ESP32, o Wokwi ou clientes MQTT locais.
+      # Dentro das redes Docker, o broker sempre escuta em mosquitto:1883.
+      - "${MQTT_HOST_PORT:-1883}:1883"
     volumes:
       - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
     restart: unless-stopped
     networks:
       - aula4-iot
-
 
   mqtt-kafka-producer:
     build:
@@ -20,13 +33,12 @@ services:
     depends_on:
       mosquitto:
         condition: service_started
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     environment:
       MQTT_HOST: ${MQTT_HOST:-mosquitto}
-      MQTT_PORT: ${MQTT_PORT:-1883}
+      # Porta do broker DENTRO da rede Docker: não depende de MQTT_HOST_PORT.
+      MQTT_PORT: "1883"
       MQTT_TOPIC: ${MQTT_TOPIC:-opaiot/air_quality}
-      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-host.docker.internal:29092}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
       KAFKA_TOPIC: ${KAFKA_TOPIC:-iot.air_quality}
       DEFAULT_SENSOR_ID: ${DEFAULT_SENSOR_ID:-sensor-01}
       DEFAULT_ROOM: ${DEFAULT_ROOM:-lab-01}
@@ -34,8 +46,16 @@ services:
     restart: unless-stopped
     networks:
       - aula4-iot
-
+      - aula3-kafka
 
 networks:
   aula4-iot:
     driver: bridge
+
+  # Rede criada pelo compose da Aula 3. Esse compose não define `name:`, então o
+  # projeto (e o prefixo da rede) é o nome da pasta, "docker". Se este compose
+  # falhar com "network ... not found", a stack da Aula 3 não está no ar ou foi
+  # iniciada com outro nome de projeto; confira com: docker network ls
+  aula3-kafka:
+    external: true
+    name: docker_kafka-iot
