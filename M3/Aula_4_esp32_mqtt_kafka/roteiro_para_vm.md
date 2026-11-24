@@ -135,7 +135,7 @@ KAFKA_BOOTSTRAP_SERVERS=localhost:9092 \
 python scripts/mqtt_kafka_producer.py
 ```
 
-Defina `MQTT_PORT=1883` sempre: o padrão do script é `20202`, que não é a porta do Mosquitto desta VM. Os demais valores (`MQTT_TOPIC=opaiot/air_quality`, `KAFKA_TOPIC=iot.air_quality`, `DEFAULT_*`) já têm padrão adequado. A lista de variáveis está no [README dos scripts](scripts/README.md).
+`MQTT_HOST` e `MQTT_PORT` repetem os padrões do script e estão aqui para deixar claro onde a ponte se conecta. `KAFKA_BOOTSTRAP_SERVERS` **precisa** ser informado: o padrão do script (`localhost:29092`) é o listener externo do Kafka da Aula 3 com Docker, e o Kafka da VM escuta em `localhost:9092`. Os demais valores (`MQTT_TOPIC=opaiot/air_quality`, `KAFKA_TOPIC=iot.air_quality`, `DEFAULT_*`) já têm padrão adequado. A lista de variáveis está no [README dos scripts](scripts/README.md).
 
 A saída deve ser:
 
@@ -156,11 +156,11 @@ mosquitto_pub -h localhost -p 1883 -t 'opaiot/air_quality' \
   -m '{"sensor_id":"sensor-99","room":"lab-99","temperature":28.4,"humidity":61.0,"co2":900}'
 ```
 
-Na sessão A (a ponte) devem aparecer duas linhas: `forwarded mqtt payload=...` (a normalização) e `sent topic=iot.air_quality partition=... offset=... key=sensor-99` (a publicação no Kafka). Anote os valores de `partition` e `offset`.
+Na sessão A (a ponte) aparece na hora `forwarded mqtt payload=...` (a normalização). A linha `sent topic=iot.air_quality partition=... offset=... key=sensor-99` (a confirmação de entrega no Kafka) só é impressa quando a **próxima** mensagem chega à ponte, porque o callback de entrega do producer roda no `poll()`, que a ponte só chama ao publicar. Publique também a mensagem do passo 9 e, então, anote os valores de `partition` e `offset` da linha `sent` do `sensor-99`.
 
 ## 8. Conferir a mensagem no Kafka (sessão B)
 
-**Opção A — ler a mensagem exata.** Substitua `<P>` e `<N>` pelos valores de `partition=` e `offset=` da linha `sent ...`:
+**Opção A — ler a mensagem exata.** Depois de publicar também a mensagem do passo 9 (para a linha `sent` do `sensor-99` aparecer na ponte), substitua `<P>` e `<N>` pelos valores de `partition=` e `offset=` dessa linha:
 
 ```bash
 /opt/kafka/bin/kafka-console-consumer.sh \
@@ -239,9 +239,9 @@ O ambiente virtual `.venv` e o log `~/workspace/mosquitto-aula4.log` podem ficar
 
 Se o Mosquitto não iniciar e o log mostrar `Address already in use`, já há um broker na porta `1883`. Veja com `pgrep -af mosquitto`; se for o que o `apt` iniciou, encerre-o com `sudo pkill -x mosquitto` e repita o comando do passo 3.
 
-Se a ponte repetir `waiting for mqtt broker: [Errno 111] Connection refused`, o Mosquitto não está no ar ou a porta está errada. Confira `ss -ltn | grep 1883` e se você passou `MQTT_PORT=1883` (o padrão do script é `20202`).
+Se a ponte repetir `waiting for mqtt broker: [Errno 111] Connection refused`, o Mosquitto não está no ar ou a porta está errada. Confira `ss -ltn | grep 1883`.
 
-Se a ponte registrar erros de conexão com `localhost:9092`, o Kafka não está rodando. Veja `pgrep -af 'kafka\.Kafka'` e inicie-o conforme o [roteiro do Kafka](../Aula_3_kafka/instalando_kafka_vm.md).
+Se a ponte registrar erros de conexão com o Kafka, confirme que o log inicial mostra `kafka bootstrap servers: localhost:9092` (sem a variável `KAFKA_BOOTSTRAP_SERVERS`, o script tenta `localhost:29092`, que não existe na VM) e que o Kafka está rodando: `pgrep -af 'kafka\.Kafka'`. Inicie-o conforme o [roteiro do Kafka](../Aula_3_kafka/instalando_kafka_vm.md).
 
 Se aparecer `ModuleNotFoundError: No module named 'confluent_kafka'` (ou `paho`), o ambiente virtual não está ativo ou as dependências não foram instaladas. Rode `source .venv/bin/activate` e `pip install -r scripts/requirements.txt` no diretório da aula.
 

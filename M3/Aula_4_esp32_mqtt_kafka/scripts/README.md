@@ -1,4 +1,4 @@
-# MQTT -> Kafka producer
+# Ponte MQTT -> Kafka
 
 Script que lê telemetria MQTT e publica no tópico Kafka `iot.air_quality` com o mesmo formato da [Aula 3](../../Aula_3_kafka/scripts/producer.py):
 
@@ -13,6 +13,8 @@ Script que lê telemetria MQTT e publica no tópico Kafka `iot.air_quality` com 
 }
 ```
 
+O caminho principal da prática é com Docker, descrito no [README da aula](../README.md): lá o serviço `mqtt-kafka-producer` já executa este script. Esta página documenta a normalização de payload, as variáveis de configuração e como rodar o script **diretamente com Python** no host. Para rodá-lo na VM do curso (sem Docker), siga o [roteiro para a VM](../roteiro_para_vm.md).
+
 ## Formato de entrada MQTT
 
 O script aceita mensagens já no formato da Aula 3 ou converte automaticamente payloads comuns de IoT:
@@ -26,9 +28,11 @@ O script aceita mensagens já no formato da Aula 3 ou converte automaticamente p
 | `co2` | `co2` ou `DEFAULT_CO2` |
 | `timestamp` | `timestamp` ou horário UTC atual |
 
-O firmware desta aula em [firmware/esp32_mq7_mqtt.ino](../firmware/esp32_mq7_mqtt.ino) já publica no formato da Aula 3.
+`temperature` e `humidity` são obrigatórios: payloads sem um deles, ou que não sejam um objeto JSON, são ignorados com um aviso no log.
 
-Exemplo alternativo compatível com o ESP32 da [Aula 8](../../../M2/Aula_8_pipeline_iot/esp32_dht22_mqtt.ino):
+O `sensor_id` resultante é usado como **chave** da mensagem Kafka, o que mantém os eventos de um mesmo sensor na mesma partition.
+
+O firmware desta aula em [firmware/esp32_mq7_mqtt.ino](../firmware/esp32_mq7_mqtt.ino) já publica no formato da Aula 3. Exemplo alternativo, compatível com o ESP32 da [Aula 8 do M2](../../../M2/Aula_8_pipeline_iot/esp32_dht22_mqtt.ino):
 
 ```json
 {
@@ -39,116 +43,87 @@ Exemplo alternativo compatível com o ESP32 da [Aula 8](../../../M2/Aula_8_pipel
 }
 ```
 
-## Instalação
+## Variáveis de ambiente
+
+Lidas pelo script. No Compose, os valores vêm de [../docker-compose.yml](../docker-compose.yml) e do `.env` da aula (veja [../.env.example](../.env.example)).
+
+| Variável | Padrão no script | No Compose | Descrição |
+| --- | --- | --- | --- |
+| `MQTT_HOST` | `localhost` | `mosquitto` | Broker MQTT (nome do serviço na rede Docker) |
+| `MQTT_PORT` | `1883` | `1883` | Porta do broker. No Compose é fixa; a porta publicada no host é `MQTT_HOST_PORT` |
+| `MQTT_TOPIC` | `opaiot/air_quality` | `opaiot/air_quality` | Tópico assinado (aceita wildcard, ex.: `opaiot/+/air_quality`) |
+| `KAFKA_BOOTSTRAP_SERVERS` | `localhost:29092` | `kafka:9092` | Kafka da Aula 3, pela rede compartilhada |
+| `KAFKA_TOPIC` | `iot.air_quality` | `iot.air_quality` | Tópico Kafka de destino |
+| `DEFAULT_SENSOR_ID` | `sensor-01` | `sensor-01` | Sensor usado quando a mensagem não traz identificador |
+| `DEFAULT_ROOM` | `lab-01` | `lab-01` | Sala usada quando a mensagem não traz `room`/`location` |
+| `DEFAULT_CO2` | `800` | `800` | CO2 usado quando a mensagem não traz `co2` |
+
+O padrão do script para o Kafka (`localhost:29092`) é o endereço do listener externo da Aula 3, correto para quem roda o script **no host**. Dentro de um container ele não serve; por isso o Compose define `kafka:9092`. O script também aceita `KAFKA_EXTERNAL_BOOTSTRAP` como alternativa a `KAFKA_BOOTSTRAP_SERVERS`.
+
+## Executar no host
+
+Suba primeiro as duas stacks (Kafka da Aula 3 e Mosquitto desta aula), conforme o [README da aula](../README.md). Pare o serviço da ponte para não ter duas instâncias concorrendo:
 
 ```bash
-cd M3/Aula_4_esp32_mqtt_kafka/scripts
+cd M3/Aula_4_esp32_mqtt_kafka
+docker compose stop mqtt-kafka-producer
+```
+
+Prepare o ambiente Python:
+
+```bash
+cd scripts
 python -m venv .venv
-
-# Linux/macOS
-source .venv/bin/activate
-
-# Windows PowerShell
-.venv\Scripts\Activate.ps1
-
+source .venv/bin/activate          # Windows PowerShell: .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-## Pré-requisitos
-
-- Python 3.10+ e `pip`
-- Docker (se for usar a stack em `docker compose`)
-
-## Executar localmente (exemplo rápido)
-
-Linux/macOS:
+Execute apontando para as portas publicadas no host (`1883` para o Mosquitto, `29092` para o Kafka da Aula 3):
 
 ```bash
-cd M3/Aula_4_esp32_mqtt_kafka
-cp .env.example .env
-cd scripts
-source .venv/bin/activate
-set -o allexport; source ../.env; set +o allexport
-python mqtt_kafka_producer.py
-```
-
-Windows PowerShell:
-
-```powershell
-cd M3\Aula_4_esp32_mqtt_kafka
-Copy-Item .env.example .env -ErrorAction SilentlyContinue
-cd scripts
-.venv\Scripts\Activate.ps1
-# Carrega variáveis do .env para o processo (simples)
-Get-Content ..\.env | ForEach-Object {
-  if ($_ -match '^[^#=]+=(.*)$') {
-    $parts = $_ -split '='; [System.Environment]::SetEnvironmentVariable($parts[0].Trim(), $parts[1].Trim(), 'Process')
-  }
-}
-$env:KAFKA_BOOTSTRAP_SERVERS = $env:KAFKA_EXTERNAL_BOOTSTRAP
-python mqtt_kafka_producer.py
-```
-
-## Execução
-
-Com a stack da aula (`docker compose up --build -d` na raiz de `Aula_4_esp32_mqtt_kafka`), o serviço `mqtt-kafka-producer` já executa este script.
-
-Para rodar manualmente no host, carregue o `.env` da raiz da aula:
-
-```bash
-cd M3/Aula_4_esp32_mqtt_kafka
-cp .env.example .env   # se ainda nao existir
-
-cd scripts
-set -a && source ../.env && set +a
+MQTT_HOST=localhost MQTT_PORT=1883 \
+KAFKA_BOOTSTRAP_SERVERS=localhost:29092 \
 python mqtt_kafka_producer.py
 ```
 
 No PowerShell:
 
 ```powershell
-cd M3\Aula_4_esp32_mqtt_kafka
-Copy-Item .env.example .env
-
-cd scripts
-Get-Content ..\.env | ForEach-Object {
-  if ($_ -match '^\s*([^#=]+)=(.*)$') {
-    [System.Environment]::SetEnvironmentVariable($matches[1].Trim(), $matches[2].Trim(), 'Process')
-  }
-}
-$env:KAFKA_BOOTSTRAP_SERVERS = $env:KAFKA_EXTERNAL_BOOTSTRAP
+$env:MQTT_HOST = "localhost"
+$env:MQTT_PORT = "1883"
+$env:KAFKA_BOOTSTRAP_SERVERS = "localhost:29092"
 python mqtt_kafka_producer.py
 ```
 
-## Variáveis de ambiente
+> Rodando no host, `localhost:29092` é o endereço correto do Kafka: é o listener externo que o broker da Aula 3 anuncia. Dentro de um container, esse endereço não serve — por isso o Compose usa `kafka:9092` pela rede compartilhada.
 
-Definidas em [../.env.example](../.env.example):
-
-| Variável | Padrão | Descrição |
-| --- | --- | --- |
-| `MQTT_HOST` | `localhost` | Broker MQTT no host |
-| `MQTT_INTERNAL_HOST` | `mosquitto` | Broker MQTT na rede Docker |
-| `MQTT_PORT` | `1883` | Porta MQTT |
-| `MQTT_TOPIC` | `opaiot/temperature` | Tópico MQTT (aceita wildcard `+`) |
-| `KAFKA_BOOTSTRAP_SERVERS` | `host.docker.internal:29092` | Kafka para o bridge no Docker (Aula 3 no host) |
-| `KAFKA_EXTERNAL_BOOTSTRAP` | `localhost:29092` | Kafka no host (usado pelo script se `KAFKA_BOOTSTRAP_SERVERS` nao estiver definido) |
-| `KAFKA_TOPIC` | `iot.air_quality` | Tópico Kafka de destino |
-| `DEFAULT_SENSOR_ID` | `sensor-01` | Sensor usado quando a mensagem MQTT não traz identificador |
-| `DEFAULT_ROOM` | `lab-01` | Sala usada quando a mensagem MQTT não traz `room`/`location` |
-| `DEFAULT_CO2` | `800` | CO2 usado quando a mensagem MQTT não traz `co2` |
+Ao terminar, encerre o script com `Ctrl+C` e religue a ponte do Compose com `docker compose start mqtt-kafka-producer`.
 
 ## Verificação
 
-Consuma mensagens do tópico:
+Com a ponte rodando, publique uma mensagem de teste:
 
 ```bash
-docker compose -f M3/Aula_3_kafka/docker/docker-compose.yml exec kafka \
+docker compose exec mosquitto mosquitto_pub -h localhost \
+  -t 'opaiot/air_quality' \
+  -m '{"sensor_id":"sensor-99","room":"lab-99","temperature":28.4,"humidity":61.0,"co2":900}'
+```
+
+No Windows PowerShell 5.1, escape as aspas duplas do JSON com barra invertida (`'{\"sensor_id\":...}'`); veja o passo 3.4 do [README da aula](../README.md).
+
+A ponte registra `forwarded mqtt payload=...` (evento normalizado) e, ao receber a mensagem seguinte, `sent topic=iot.air_quality partition=... offset=... key=sensor-99` (o callback de entrega só roda no `poll()` da próxima publicação). Confirme a chegada no consumer da Aula 3:
+
+```bash
+docker compose -f ../../Aula_3_kafka/docker/docker-compose.yml logs consumer | grep sensor-99
+```
+
+Ou leia direto do tópico, na partition indicada no log da ponte (no Git Bash do Windows, prefixe o comando com `MSYS_NO_PATHCONV=1`; veja o [README da aula](../README.md)):
+
+```bash
+docker compose -f ../../Aula_3_kafka/docker/docker-compose.yml exec kafka \
   /opt/kafka/bin/kafka-console-consumer.sh \
   --bootstrap-server kafka:9092 \
   --topic iot.air_quality \
-  --from-beginning \
   --property print.key=true \
-  --max-messages 5
+  --partition 0 --from-beginning --max-messages 2
 ```
-
-Ou use o consumer da Aula 3 (`consumer_metrics.py`) e o Grafana provisionado na stack Kafka.

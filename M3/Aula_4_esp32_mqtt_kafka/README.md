@@ -66,7 +66,7 @@ Por que não usar a porta `29092` publicada no host? Porque o listener externo d
 | Variável | Valor no `.env.example` | Uso |
 | --- | --- | --- |
 | `MQTT_HOST` | `mosquitto` | Broker MQTT visto pela ponte (nome do serviço na rede Docker) |
-| `MQTT_PORT` | `1883` | Porta publicada no host **e** usada pela ponte; mantenha `1883` |
+| `MQTT_HOST_PORT` | `1883` | Porta publicada no host para ESP32, Wokwi e clientes locais (dentro das redes Docker o broker é sempre `mosquitto:1883`) |
 | `MQTT_TOPIC` | `opaiot/air_quality` | Tópico assinado pela ponte (aceita wildcard, ex.: `opaiot/+/air_quality`) |
 | `KAFKA_BOOTSTRAP_SERVERS` | `kafka:9092` | Kafka visto pela ponte, pela rede da Aula 3 |
 | `KAFKA_TOPIC` | `iot.air_quality` | Tópico Kafka de destino |
@@ -74,7 +74,7 @@ Por que não usar a porta `29092` publicada no host? Porque o listener externo d
 | `DEFAULT_ROOM` | `lab-01` | Sala usada quando o payload não traz `room`/`location` |
 | `DEFAULT_CO2` | `800` | CO2 usado quando o payload não traz `co2` |
 
-O `.env.example` traz ainda `MQTT_INTERNAL_HOST` e `KAFKA_EXTERNAL_BOOTSTRAP`, que o Compose **ignora** (a segunda só serve ao script rodando direto no host; veja [scripts/README.md](scripts/README.md)).
+Todas têm padrão no `docker-compose.yml`, então o `.env` só é preciso se você quiser alterar algum valor. Para rodar a ponte direto no host, sem Compose, veja [scripts/README.md](scripts/README.md).
 
 **Arquivos da aula:**
 
@@ -93,7 +93,7 @@ O `.env.example` traz ainda `MQTT_INTERNAL_HOST` e `KAFKA_EXTERNAL_BOOTSTRAP`, q
 
 Pré-requisitos: Docker com Docker Compose v2. Para o dispositivo real: ESP32 com DHT22 e MQ-7, ou um projeto Wokwi.
 
-> **Dica (Windows):** execute os comandos no PowerShell ou no Git Bash. Onde a sintaxe diferir (cópia de arquivo, aspas no JSON), o passo traz as duas formas. Os comandos com `| grep texto` funcionam no Git Bash; no PowerShell, troque por `| Select-String texto`.
+> **Dica (Windows):** execute os comandos no PowerShell ou no Git Bash. Onde a sintaxe diferir (cópia de arquivo, aspas no JSON), o passo traz as duas formas. Os comandos com `| grep texto` funcionam no Git Bash; no PowerShell, troque por `| Select-String texto`. No Git Bash, um caminho absoluto do container (como `/opt/kafka/bin/...` no passo 3.4) exige o prefixo `MSYS_NO_PATHCONV=1` no comando; sem ele o Git Bash converte o caminho para `C:/Program Files/Git/opt/...` e o `exec` falha. No PowerShell não é preciso.
 
 ### 3.1. Subir o Kafka da Aula 3
 
@@ -113,12 +113,12 @@ Se este passo for pulado, o compose do passo seguinte falha com `network docker_
 
 ```bash
 cd ../../Aula_4_esp32_mqtt_kafka
-cp .env.example .env            # PowerShell: Copy-Item .env.example .env
+cp .env.example .env            # opcional; PowerShell: Copy-Item .env.example .env
 docker compose up --build -d
 docker compose ps
 ```
 
-O `.env` é **necessário**: sem ele, o Compose usa para `KAFKA_BOOTSTRAP_SERVERS` o padrão `host.docker.internal:29092`, que cai no problema do listener externo descrito na seção 2. Para conferir o que o Compose vai usar:
+O `.env` é opcional: só é preciso se quiser alterar os padrões da tabela da seção 2. Para conferir o que o Compose vai usar:
 
 ```bash
 docker compose config | grep -E "MQTT_|KAFKA_"
@@ -186,11 +186,13 @@ docker compose exec mosquitto mosquitto_pub -h localhost -t 'opaiot/air_quality'
 
 Use **só uma** das formas conforme o seu shell: no PowerShell 7.3+ a versão com barras quebra o JSON.
 
-Nos logs da ponte devem aparecer duas linhas: `forwarded mqtt payload=...` (a normalização) e `sent topic=iot.air_quality partition=... offset=... key=sensor-99` (a publicação no Kafka):
+Nos logs da ponte aparecem `forwarded mqtt payload=...` (a normalização, na hora) e `sent topic=iot.air_quality partition=... offset=... key=sensor-99` (a confirmação de entrega no Kafka):
 
 ```bash
 docker compose logs --tail=4 mqtt-kafka-producer
 ```
+
+> **Atenção:** a linha `sent` de uma mensagem só é impressa quando a **próxima** mensagem chega à ponte. O callback de entrega do producer roda no `poll()`, que a ponte só chama ao publicar. Com uma única mensagem, você verá só o `forwarded`; publique outra (por exemplo, o passo 3.5) para ver o `sent` da primeira, ou confirme direto no consumer, logo abaixo.
 
 Confirme que o evento chegou ao outro lado do pipeline, no consumer da Aula 3:
 
@@ -198,7 +200,7 @@ Confirme que o evento chegou ao outro lado do pipeline, no consumer da Aula 3:
 docker compose -f ../Aula_3_kafka/docker/docker-compose.yml logs consumer | grep sensor-99
 ```
 
-A linha mostra `key=sensor-99` e o payload completo — o caminho MQTT → ponte → Kafka → consumer está fechado. Para ler direto do tópico, use a partition indicada no log da ponte:
+A linha mostra `key=sensor-99` e o payload completo — o caminho MQTT → ponte → Kafka → consumer está fechado. Para ler direto do tópico, use a partition indicada na linha `sent` da ponte:
 
 ```bash
 docker compose -f ../Aula_3_kafka/docker/docker-compose.yml exec kafka \
@@ -249,7 +251,7 @@ O log mostra `ignored unsupported payload` e nada é enviado ao Kafka.
 ### 3.6. Conectar o ESP32 (real ou Wokwi)
 
 1. Descubra o IP da sua máquina na rede local (`ipconfig` no Windows, `ip a` no Linux). O broker está publicado na porta `1883` do host; **não use `localhost`** no firmware.
-2. Abra [firmware/esp32_mq7_mqtt.ino](firmware/esp32_mq7_mqtt.ino) e ajuste as constantes do topo: `WIFI_SSID`/`WIFI_PASS`, `MQTT_SERVER` (o IP do passo 1), `MQTT_PORT` (`1883`) e `SENSOR_ID`. O arquivo do repositório vem com `andromeda.lasdpc.icmc.usp.br` e a porta `20202`: **troque os dois**, senão o ESP32 não chega ao seu Mosquitto. O `MQTT_TOPIC` (`opaiot/air_quality`) já coincide com o da ponte.
+2. Abra [firmware/esp32_mq7_mqtt.ino](firmware/esp32_mq7_mqtt.ino) e ajuste as constantes do topo: `WIFI_SSID`/`WIFI_PASS`, `MQTT_SERVER` (o IP do passo 1), `MQTT_PORT` (`1883`, ou o `MQTT_HOST_PORT` do seu `.env`) e `SENSOR_ID`. O arquivo do repositório vem com `andromeda.lasdpc.icmc.usp.br` e a porta `20202`: **troque os dois**, senão o ESP32 não chega ao seu Mosquitto. O `MQTT_TOPIC` (`opaiot/air_quality`) já coincide com o da ponte.
 3. Grave na placa (ou monte no Wokwi, conforme [firmware/README.md](firmware/README.md)).
 4. Libere a porta `1883` no firewall do computador, para conexões vindas da rede local.
 5. Acompanhe `docker compose logs -f mqtt-kafka-producer` e o dashboard da Aula 3 em <http://localhost:3000/d/iot-kafka-telemetry> (`admin` / `admin`): as leituras do ESP32 entram no mesmo pipeline dos sensores simulados.
@@ -291,9 +293,9 @@ Derrube a stack desta aula **antes** da Aula 3: a rede `docker_kafka-iot` não �
 ### Problemas comuns
 
 - `network docker_kafka-iot declared as external, but could not be found`: a stack da Aula 3 precisa estar no ar **antes** (passo 3.1); confira `docker compose ps` lá e o nome da rede com `docker network ls`.
-- Ponte com erro de conexão ao Kafka ou `kafka delivery failed` nos logs: confirme que existe um `.env` com `KAFKA_BOOTSTRAP_SERVERS=kafka:9092` (`docker compose config`), que a ponte está nas duas redes e que o container `kafka` está `healthy`.
-- `Bind for 0.0.0.0:1883 failed: port is already allocated`: outro Mosquitto usa a porta (por exemplo, a stack da Aula 5). Pare-o com `docker compose down` na pasta dele; não troque `MQTT_PORT`, pois a ponte usa o mesmo valor para falar com o broker.
-- ESP32 não conecta ao broker: confirme que `MQTT_SERVER` é o IP do host (não `localhost`), que `MQTT_PORT` é `1883` e que o firewall libera a porta.
+- Ponte com erro de conexão ao Kafka ou `kafka delivery failed` nos logs: confirme com `docker compose config` que `KAFKA_BOOTSTRAP_SERVERS` é `kafka:9092` (um `.env` antigo pode ter outro valor), que a ponte está nas duas redes (`docker inspect opaiot-aula4-mqtt-kafka-producer-1`) e que o container `kafka` está `healthy`.
+- `Bind for 0.0.0.0:1883 failed: port is already allocated`: outro Mosquitto usa a porta (por exemplo, a stack da Aula 5). Pare-o com `docker compose down` na pasta dele, ou publique este broker em outra porta do host com `MQTT_HOST_PORT=1884` no `.env` (e use `1884` no firmware e nos clientes do host). A ponte não é afetada, pois fala com `mosquitto:1883` pela rede Docker.
+- ESP32 não conecta ao broker: confirme que `MQTT_SERVER` é o IP do host (não `localhost`), que `MQTT_PORT` é a porta publicada (`1883` por padrão) e que o firewall libera a porta.
 - Mensagem publicada mas nada no Kafka: veja os logs da ponte. Payloads que não são JSON válido são descartados com `invalid json`; JSON sem `temperature` ou `humidity` é ignorado com `ignored unsupported payload`. No Windows PowerShell 5.1, `invalid json` costuma ser o escape das aspas (passo 3.4).
 - `docker exec` não encontra `opaiot-aula4-mosquitto-1`: o nome mudou (Compose v1 usa `_` no lugar de `-`) ou o serviço não está no ar. Use `docker compose exec mosquitto sh`.
 
